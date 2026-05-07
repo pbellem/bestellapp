@@ -1250,19 +1250,27 @@ function saveItem(){
 }
 function delItem(id){state.menu=state.menu.filter(function(i){return i.id!==id;});saveLocal();pushSettings();renderAdminMenu();notify('Item verwijderd');}
 
-function renderFbConfig(){document.getElementById('fb-url').value=state.fbUrl||'';}
 function saveFbUrl(){
   var url=document.getElementById('fb-url').value.trim();
   state.fbUrl=url;saveLocal();
   if(url){
     initFirebase(url);
-    notify('Verbinden en instellingen ophalen...');
+    // direct settings ophalen en admin opnieuw renderen
+    fetchSettings(function(){
+      renderAdminMenu();renderPrinters();renderCats();renderStaff();
+      notify('Firebase verbonden — instellingen opgehaald');
+    });
   } else {
     notify('Firebase URL gewist');
   }
 }
 
-if(state.fbUrl) initFirebase(state.fbUrl);
+// Init bij start: als FB URL al opgeslagen, eerst settings ophalen, dan polling starten
+if(state.fbUrl){
+  fetchSettings(function(){
+    initFirebase(state.fbUrl);
+  });
+}
 </script>
 </body>
 </html>
