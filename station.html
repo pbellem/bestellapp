@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Station — Popup Restaurant</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;overflow-x:hidden}
+
+/* TOPBAR */
+.topbar{background:#1e293b;padding:10px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.topbar h1{font-size:18px;font-weight:700;color:#fff}
+.cat-tabs{display:flex;gap:6px;flex:1;overflow-x:auto;padding:4px 0}
+.cat-tab{padding:8px 16px;border-radius:24px;background:#334155;color:#cbd5e1;cursor:pointer;font-size:14px;font-weight:600;white-space:nowrap;border:2px solid transparent;transition:all .12s}
+.cat-tab:active{transform:scale(.96)}
+.cat-tab.active{background:#fff;color:#0f172a}
+.cat-tab .count{background:rgba(0,0,0,.15);padding:2px 8px;border-radius:12px;font-size:12px;margin-left:6px}
+.cat-tab.active .count{background:#2563eb;color:#fff}
+.sync-pill{font-size:12px;display:flex;align-items:center;gap:6px;background:#334155;padding:5px 10px;border-radius:20px;color:#94a3b8}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
+.sync-dot.ok{background:#22c55e}
+.sync-dot.err{background:#dc2626}
+.settings-btn{background:#334155;color:#cbd5e1;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+.settings-btn:hover{background:#475569}
+
+/* SETUP SCREEN */
+.setup{padding:40px 20px;max-width:500px;margin:0 auto}
+.setup-card{background:#1e293b;border-radius:16px;padding:28px}
+.setup h2{font-size:22px;margin-bottom:6px;color:#fff}
+.setup p{color:#94a3b8;font-size:14px;margin-bottom:20px}
+.setup label{display:block;color:#94a3b8;font-size:13px;margin-bottom:6px;margin-top:14px}
+.setup input,.setup select{width:100%;padding:12px;border-radius:10px;border:1px solid #475569;background:#0f172a;color:#fff;font-size:15px;font-family:inherit}
+.setup input:focus,.setup select:focus{outline:none;border-color:#2563eb}
+.setup button{width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px}
+.setup button:hover{background:#1d4ed8}
+.setup .cat-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.setup .cat-pick-item{padding:14px;border-radius:10px;background:#0f172a;border:2px solid #475569;cursor:pointer;text-align:center;font-weight:600}
+.setup .cat-pick-item.sel{border-color:#2563eb;background:#1e3a8a}
+
+/* MAIN */
+.main{padding:16px;max-width:1400px;margin:0 auto}
+.empty{text-align:center;padding:80px 20px;color:#64748b}
+.empty .ico{font-size:64px;margin-bottom:14px;opacity:.5}
+
+/* BONS GRID */
+.bons{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+
+.bon{background:#1e293b;border-radius:14px;border:2px solid #334155;overflow:hidden;display:flex;flex-direction:column;transition:all .25s}
+.bon.fading{background:#14532d;border-color:#22c55e;opacity:.85}
+.bon-head{padding:14px 16px;background:#334155;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1e293b}
+.bon.fading .bon-head{background:#16a34a}
+.bon-table{font-size:22px;font-weight:800;color:#fff}
+.bon-name{font-size:13px;color:#cbd5e1;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bon.fading .bon-name{color:#dcfce7}
+.bon-time{font-size:12px;background:rgba(0,0,0,.2);color:#fff;padding:4px 8px;border-radius:10px;white-space:nowrap}
+.bon-time.warn{background:#dc2626}
+.bon-time.medium{background:#f59e0b}
+.bon-body{padding:8px;flex:1}
+.bon-item{display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:8px;background:#0f172a;margin-bottom:6px;cursor:pointer;transition:all .15s;user-select:none}
+.bon-item:active{transform:scale(.98)}
+.bon-item.served{background:#14532d;opacity:.6}
+.bon-item.served .item-name,.bon-item.served .item-meta{text-decoration:line-through;color:#94a3b8}
+.item-check{width:32px;height:32px;border-radius:8px;border:2px solid #475569;background:transparent;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;color:#fff;font-weight:700}
+.bon-item.served .item-check{background:#22c55e;border-color:#22c55e}
+.item-content{flex:1;min-width:0}
+.item-name{font-size:17px;font-weight:700;color:#fff;line-height:1.25}
+.item-qty{display:inline-block;background:#2563eb;color:#fff;padding:1px 10px;border-radius:14px;font-size:14px;font-weight:700;margin-right:8px}
+.item-meta{font-size:13px;color:#cbd5e1;margin-top:3px}
+.item-variation{color:#fbbf24;font-weight:600}
+.item-comment{font-style:italic;color:#fde047;background:#422006;padding:4px 8px;border-radius:6px;margin-top:4px;display:inline-block;font-size:13px}
+.bon-foot{padding:10px;background:#0f172a;border-top:1px solid #334155;display:flex;gap:8px}
+.bon.fading .bon-foot{background:rgba(0,0,0,.2);border-color:#16a34a}
+.bon-btn{flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#fff}
+.bon-btn-done{background:#16a34a}
+.bon-btn-done:active{background:#15803d}
+.bon-btn-back{background:#475569}
+
+/* RESPONSIVE */
+@media (max-width:700px){
+  .topbar h1{display:none}
+  .bons{grid-template-columns:1fr}
+  .topbar{padding:8px 12px}
+}
+@media (min-width:1100px){
+  .bons{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}
+}
+
+/* NOTIF */
+.notif{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-20px);background:#16a34a;color:#fff;padding:12px 24px;border-radius:24px;font-size:15px;font-weight:700;z-index:300;opacity:0;transition:all .3s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="notif" class="notif"></div>
+
+<!-- SETUP SCHERM -->
+<div id="setup-screen" class="setup" style="display:none">
+  <div class="setup-card">
+    <h2>🍳 Station instellen</h2>
+    <p>Configureer dit toestel voor één station (bv. keuken of bar).</p>
+
+    <label>Firebase Database URL</label>
+    <input type="text" id="setup-fb" placeholder="https://jouw-project.firebasedatabase.app">
+
+    <button onclick="setupConnect()">Verbinden</button>
+
+    <div id="setup-cats" style="display:none">
+      <label style="margin-top:24px">Welke categorieën tonen op dit station?</label>
+      <p style="font-size:12px;margin-top:0">Tip: keuken kiest meestal één categorie. Je kan er meerdere selecteren.</p>
+      <div class="cat-pick" id="setup-cat-list"></div>
+      <button onclick="setupSave()" style="margin-top:20px">Station starten</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOOFDSCHERM -->
+<div id="main-screen" style="display:none">
+  <div class="topbar">
+    <h1 id="station-name">Station</h1>
+    <div class="cat-tabs" id="cat-tabs"></div>
+    <div class="sync-pill"><span class="sync-dot" id="sync-dot"></span><span id="sync-txt">...</span></div>
+    <button class="settings-btn" onclick="openSettings()" title="Instellingen">⚙</button>
+  </div>
+  <div class="main">
+    <div id="bons-container"></div>
+  </div>
+</div>
+
+<script>
+var state = {
+  fbUrl: '',
+  selectedCatIds: [],
+  activeCatId: null,
+  orders: [],
+  categories: [],
+  printers: [],
+  menu: []
+};
+
+var pollTimer = null;
+var fadingBons = {};       // key -> setTimeout handle
+var FADING_MS = 30000;     // 30 sec
+var freshOrders = {};      // fbId -> firstSeenTs (om "tijd verstreken" te tonen)
+
+function notify(msg){var n=document.getElementById('notif');n.textContent=msg;n.classList.add('show');setTimeout(function(){n.classList.remove('show');},1500);}
+function esc(s){return String(s).replace(/'/g,"\\'");}
+
+function loadConfig(){
+  try{
+    var raw=localStorage.getItem('station-config');
+    if(raw){
+      var c=JSON.parse(raw);
+      state.fbUrl=c.fbUrl||'';
+      state.selectedCatIds=c.selectedCatIds||[];
+      state.activeCatId=c.activeCatId||(state.selectedCatIds[0]||null);
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+function saveConfig(){
+  localStorage.setItem('station-config', JSON.stringify({
+    fbUrl: state.fbUrl,
+    selectedCatIds: state.selectedCatIds,
+    activeCatId: state.activeCatId
+  }));
+}
+
+// ── SETUP ────────────────────────────────────────────────
+function showSetup(){
+  document.getElementById('setup-screen').style.display='block';
+  document.getElementById('main-screen').style.display='none';
+  document.getElementById('setup-fb').value=state.fbUrl||'';
+  document.getElementById('setup-cats').style.display='none';
+}
+
+function setupConnect(){
+  var url=document.getElementById('setup-fb').value.trim().replace(/\/$/,'');
+  if(!url){notify('Vul de Firebase URL in');return;}
+  state.fbUrl=url;
+  fetch(url+'/settings.json').then(function(r){return r.json();}).then(function(data){
+    if(data&&data.categories){
+      state.categories=data.categories;
+      state.printers=data.printers||[];
+      renderSetupCats();
+      document.getElementById('setup-cats').style.display='block';
+    } else {
+      notify('Geen categorieën gevonden in deze database');
+    }
+  }).catch(function(){notify('Kan geen verbinding maken');});
+}
+
+function renderSetupCats(){
+  var html='';
+  state.categories.forEach(function(c){
+    var sel=state.selectedCatIds.indexOf(c.id)!==-1;
+    html+='<div class="cat-pick-item '+(sel?'sel':'')+'" onclick="toggleSetupCat(\''+esc(c.id)+'\')">'+c.name+'</div>';
+  });
+  document.getElementById('setup-cat-list').innerHTML=html;
+}
+
+function toggleSetupCat(id){
+  var idx=state.selectedCatIds.indexOf(id);
+  if(idx===-1) state.selectedCatIds.push(id);
+  else state.selectedCatIds.splice(idx,1);
+  renderSetupCats();
+}
+
+function setupSave(){
+  if(!state.selectedCatIds.length){notify('Selecteer minstens 1 categorie');return;}
+  state.activeCatId=state.selectedCatIds[0];
+  saveConfig();
+  startMain();
+}
+
+function openSettings(){showSetup();}
+
+// ── MAIN ─────────────────────────────────────────────────
+function startMain(){
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('main-screen').style.display='block';
+  startPolling();
+  // refresh tijdsweergave elke 10s
+  setInterval(renderBons, 10000);
+}
+
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  fetchAll();
+  pollTimer=setInterval(fetchAll, 3000);
+}
+
+function setSync(s){
+  var dot=document.getElementById('sync-dot'),txt=document.getElementById('sync-txt');
+  if(s==='ok'){dot.className='sync-dot ok';txt.textContent='Live';}
+  else if(s==='err'){dot.className='sync-dot err';txt.textContent='Offline';}
+  else{dot.className='sync-dot';txt.textContent='...';}
+}
+
+function fetchAll(){
+  if(!state.fbUrl) return;
+  Promise.all([
+    fetch(state.fbUrl+'/orders.json').then(function(r){return r.json();}),
+    fetch(state.fbUrl+'/settings.json').then(function(r){return r.json();})
+  ]).then(function(res){
+    setSync('ok');
+    var orders=res[0]?Object.values(res[0]):[];
+    state.orders=orders;
+    if(res[1]){
+      if(res[1].categories) state.categories=res[1].categories;
+      if(res[1].printers) state.printers=res[1].printers;
+      if(res[1].menu) state.menu=res[1].menu;
+    }
+    // markeer nieuwe orders
+    orders.forEach(function(o){
+      if(o.fbId && !freshOrders[o.fbId]) freshOrders[o.fbId]=Date.now();
+    });
+    renderTabs();
+    renderBons();
+  }).catch(function(){setSync('err');});
+}
+
+function fbPut(path,data){return fetch(state.fbUrl+path+'.json',{method:'PUT',body:JSON.stringify(data)});}
+
+// ── TABS ─────────────────────────────────────────────────
+function renderTabs(){
+  var el=document.getElementById('cat-tabs');
+  var cats=state.categories.filter(function(c){return state.selectedCatIds.indexOf(c.id)!==-1;});
+  var stationName=cats.map(function(c){return c.name;}).join(' / ');
+  document.getElementById('station-name').textContent=stationName||'Station';
+
+  // tel openstaande items per categorie
+  var counts={};
+  state.orders.filter(function(o){return !o.paid;}).forEach(function(o){
+    o.items.forEach(function(i){
+      if(!i.served){
+        if(!counts[i.cat]) counts[i.cat]=0;
+        counts[i.cat]+=i.qty;
+      }
+    });
+  });
+
+  var html='';
+  if(cats.length>1){
+    html+='<div class="cat-tab '+(state.activeCatId==='__all'?'active':'')+'" onclick="setActiveCat(\'__all\')">Alle';
+    var totalCount=0;
+    cats.forEach(function(c){totalCount+=(counts[c.id]||0);});
+    if(totalCount>0) html+='<span class="count">'+totalCount+'</span>';
+    html+='</div>';
+  }
+  cats.forEach(function(c){
+    html+='<div class="cat-tab '+(state.activeCatId===c.id?'active':'')+'" onclick="setActiveCat(\''+esc(c.id)+'\')">';
+    html+=c.name;
+    if(counts[c.id]) html+='<span class="count">'+counts[c.id]+'</span>';
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+function setActiveCat(id){
+  state.activeCatId=id;
+  saveConfig();
+  renderTabs();
+  renderBons();
+}
+
+// ── BONS ─────────────────────────────────────────────────
+function getRelevantOrders(){
+  var activeCats;
+  if(state.activeCatId==='__all') activeCats=state.selectedCatIds;
+  else activeCats=[state.activeCatId];
+
+  // groepeer per tafel+naam, maar alleen orders die items in onze cats hebben
+  var groups={};
+  state.orders.filter(function(o){return !o.paid;}).forEach(function(o){
+    var relItems=o.items.filter(function(i){return activeCats.indexOf(i.cat)!==-1;});
+    if(!relItems.length) return;
+    var k=o.fbId||(o.table+'__'+o.name+'__'+o.ts);
+    groups[k]={fbId:o.fbId,order:o,relItems:relItems};
+  });
+  return Object.values(groups);
+}
+
+function renderBons(){
+  var el=document.getElementById('bons-container');
+  var bons=getRelevantOrders();
+
+  // sorteer: onafgewerkte eerst (oudste bovenaan), dan klare bons
+  bons.sort(function(a,b){
+    var aDone=a.relItems.every(function(i){return i.served;});
+    var bDone=b.relItems.every(function(i){return i.served;});
+    if(aDone!==bDone) return aDone?1:-1;
+    return (a.order.ts||0)-(b.order.ts||0);
+  });
+
+  if(!bons.length){
+    el.innerHTML='<div class="empty"><div class="ico">🍽️</div><div style="font-size:18px;font-weight:600;color:#94a3b8">Geen openstaande bonnen</div><div style="font-size:14px;margin-top:8px">Wachten op nieuwe bestellingen...</div></div>';
+    return;
+  }
+
+  var html='<div class="bons">';
+  bons.forEach(function(b){
+    var allDone=b.relItems.every(function(i){return i.served;});
+    var fading=fadingBons[b.fbId];
+    var ts=b.order.ts||Date.now();
+    var minsAgo=Math.floor((Date.now()-ts)/60000);
+    var timeClass=minsAgo>=15?'warn':minsAgo>=8?'medium':'';
+    var timeText=minsAgo<1?'nu':minsAgo+'m';
+
+    html+='<div class="bon '+(fading||allDone?'fading':'')+'" data-bon="'+(b.fbId||'')+'">';
+    html+='<div class="bon-head">';
+    html+='<div class="bon-table">T'+b.order.table+'</div>';
+    html+='<div class="bon-name">'+b.order.name;
+    if(b.order.waiter) html+=' · '+b.order.waiter;
+    html+='</div>';
+    html+='<div class="bon-time '+timeClass+'">'+timeText+'</div>';
+    html+='</div>';
+    html+='<div class="bon-body">';
+    b.relItems.forEach(function(item){
+      var itemKey=(b.fbId||'')+'__'+item.id+'__'+(item.variation||'')+'__'+(item.comment||'');
+      html+='<div class="bon-item '+(item.served?'served':'')+'" onclick="toggleItem(\''+esc(b.fbId||'')+'\',\''+esc(itemKey)+'\')">';
+      html+='<div class="item-check">'+(item.served?'✓':'')+'</div>';
+      html+='<div class="item-content">';
+      html+='<div class="item-name"><span class="item-qty">'+item.qty+'×</span>'+item.name+'</div>';
+      if(item.variation) html+='<div class="item-meta item-variation">› '+item.variation+'</div>';
+      if(item.comment) html+='<div class="item-comment">💬 '+item.comment+'</div>';
+      html+='</div></div>';
+    });
+    html+='</div>';
+    html+='<div class="bon-foot">';
+    if(allDone){
+      html+='<button class="bon-btn bon-btn-back" onclick="undoBon(\''+esc(b.fbId||'')+'\')">↶ Ongedaan</button>';
+    } else {
+      html+='<button class="bon-btn bon-btn-done" onclick="markBonDone(\''+esc(b.fbId||'')+'\')">✓ Bon volledig klaar</button>';
+    }
+    html+='</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+function toggleItem(fbId, itemKey){
+  var order=state.orders.find(function(o){return o.fbId===fbId;});
+  if(!order) return;
+  var changed=false;
+  order.items.forEach(function(i){
+    var k=fbId+'__'+i.id+'__'+(i.variation||'')+'__'+(i.comment||'');
+    if(k===itemKey){
+      i.served=!i.served;
+      changed=true;
+    }
+  });
+  if(!changed) return;
+  fbPut('/orders/'+fbId,order);
+  // check of alle items in onze cats nu klaar zijn → start fade
+  checkBonFading(order);
+  renderBons();
+  renderTabs();
+}
+
+function markBonDone(fbId){
+  var order=state.orders.find(function(o){return o.fbId===fbId;});
+  if(!order) return;
+  var activeCats;
+  if(state.activeCatId==='__all') activeCats=state.selectedCatIds;
+  else activeCats=[state.activeCatId];
+  order.items.forEach(function(i){
+    if(activeCats.indexOf(i.cat)!==-1) i.served=true;
+  });
+  fbPut('/orders/'+fbId,order);
+  checkBonFading(order);
+  renderBons();
+  renderTabs();
+}
+
+function undoBon(fbId){
+  var order=state.orders.find(function(o){return o.fbId===fbId;});
+  if(!order) return;
+  // cancel fade timer
+  if(fadingBons[fbId]){clearTimeout(fadingBons[fbId]);delete fadingBons[fbId];}
+  var activeCats;
+  if(state.activeCatId==='__all') activeCats=state.selectedCatIds;
+  else activeCats=[state.activeCatId];
+  order.items.forEach(function(i){
+    if(activeCats.indexOf(i.cat)!==-1) i.served=false;
+  });
+  fbPut('/orders/'+fbId,order);
+  renderBons();
+  renderTabs();
+}
+
+function checkBonFading(order){
+  if(!order.fbId) return;
+  var activeCats;
+  if(state.activeCatId==='__all') activeCats=state.selectedCatIds;
+  else activeCats=[state.activeCatId];
+  var rel=order.items.filter(function(i){return activeCats.indexOf(i.cat)!==-1;});
+  var allDone=rel.length>0 && rel.every(function(i){return i.served;});
+  if(allDone && !fadingBons[order.fbId]){
+    fadingBons[order.fbId]=setTimeout(function(){
+      delete fadingBons[order.fbId];
+      // bon zal "verdwijnen" omdat alle items served zijn — server-side blijven ze bestaan tot betaald
+      // we tonen ze gewoon niet meer omdat ze served zijn EN niet meer "fading"
+      renderBons();
+    }, FADING_MS);
+  } else if(!allDone && fadingBons[order.fbId]){
+    clearTimeout(fadingBons[order.fbId]);
+    delete fadingBons[order.fbId];
+  }
+}
+
+// ── FILTER FADED BONNEN UIT WEERGAVE NA TIMEOUT ──────────
+function getRelevantOrders(){
+  var activeCats;
+  if(state.activeCatId==='__all') activeCats=state.selectedCatIds;
+  else activeCats=[state.activeCatId];
+
+  var groups={};
+  state.orders.filter(function(o){return !o.paid;}).forEach(function(o){
+    var relItems=o.items.filter(function(i){return activeCats.indexOf(i.cat)!==-1;});
+    if(!relItems.length) return;
+    var allDone=relItems.every(function(i){return i.served;});
+    // Toon alleen als: niet alles klaar OF nog in fading-window
+    if(allDone && !fadingBons[o.fbId]) return;
+    groups[o.fbId||(o.table+'__'+o.name+'__'+o.ts)]={fbId:o.fbId,order:o,relItems:relItems};
+  });
+  return Object.values(groups);
+}
+
+// ── INIT ─────────────────────────────────────────────────
+if(loadConfig() && state.fbUrl && state.selectedCatIds.length){
+  startMain();
+} else {
+  showSetup();
+}
+</script>
+</body>
+</html>
