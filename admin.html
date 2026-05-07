@@ -507,6 +507,7 @@ var isBillPrinter = false;
 var activeFilter = 'all';
 var selectedGroupKey = null;
 var lastSync = null;
+var expandedHistKeys = {};
 
 function notify(msg){var n=document.getElementById('notif');n.textContent=msg;n.classList.add('show');setTimeout(function(){n.classList.remove('show');},2000);}
 function om(id){document.getElementById(id).classList.add('open');}
@@ -776,17 +777,80 @@ function renderHistoryTable(){
   var el=document.getElementById('history-table');if(!el)return;
   var groups=getGroups(true).sort(function(a,b){return b.lastTs-a.lastTs;});
   if(!groups.length){el.innerHTML='<div class="empty-table">Geen afgesloten bestellingen</div>';return;}
-  var html='<table><thead><tr><th>Tafel</th><th>Naam</th><th>Items</th><th>Opnemer(s)</th><th>Tijdstip</th><th style="text-align:right">Totaal</th></tr></thead><tbody>';
+  var html='<table><thead><tr><th></th><th>Tafel</th><th>Naam</th><th>Items</th><th>Opnemer(s)</th><th>Tijdstip</th><th style="text-align:right">Totaal</th><th class="col-actions">Acties</th></tr></thead><tbody>';
   groups.forEach(function(g){
     var items=g.orders.reduce(function(a,o){return a.concat(o.items);},[]);
     var qty=items.reduce(function(s,i){return s+i.qty;},0);
     var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
     var waiters=[];g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
     var time=new Date(g.lastTs).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
-    html+='<tr><td><strong>'+g.table+'</strong></td><td>'+g.name+'</td><td>'+qty+'</td><td>'+waiters.join(', ')+'</td><td>'+time+'</td><td style="text-align:right;font-weight:600">€'+total.toFixed(2)+'</td></tr>';
+    var k=g.table+'__'+g.name;
+    var expanded=expandedHistKeys[k];
+    html+='<tr style="cursor:pointer" onclick="toggleHistDetail(\''+esc(k)+'\')">';
+    html+='<td style="width:30px;color:var(--text-muted)">'+(expanded?'▼':'▶')+'</td>';
+    html+='<td><strong>'+g.table+'</strong></td><td>'+g.name+'</td><td>'+qty+'</td><td>'+waiters.join(', ')+'</td><td>'+time+'</td>';
+    html+='<td style="text-align:right;font-weight:600">€'+total.toFixed(2)+'</td>';
+    html+='<td class="col-actions" onclick="event.stopPropagation()">';
+    html+='<button class="btn btn-secondary btn-sm" onclick="reopenAsServed(\''+esc(g.table)+'\',\''+esc(g.name)+'\')" title="Terugzetten naar geserveerd">↩ Geserveerd</button> ';
+    html+='<button class="btn btn-secondary btn-sm" onclick="reopenAsOpen(\''+esc(g.table)+'\',\''+esc(g.name)+'\')" title="Terugzetten naar open">↩ Open</button> ';
+    html+='<button class="btn btn-ghost btn-icon" onclick="deleteHistGroup(\''+esc(g.table)+'\',\''+esc(g.name)+'\')" title="Verwijderen" style="color:var(--danger)">✕</button>';
+    html+='</td></tr>';
+    if(expanded){
+      html+='<tr><td></td><td colspan="7" style="background:#fafbfc;padding:0">';
+      html+='<div style="padding:14px 18px">';
+      g.orders.forEach(function(o,oidx){
+        var oTime=new Date(o.ts).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
+        html+='<div class="round-header"><span>Ronde '+(oidx+1)+' — '+oTime+'</span><span class="waiter-tag">👤 '+(o.waiter||'—')+'</span></div>';
+        o.items.forEach(function(i){
+          var col=catColorById(i.cat);
+          html+='<div class="detail-item">';
+          html+='<div class="qty-pill">'+i.qty+'×</div>';
+          html+='<div style="flex:1"><div style="font-weight:500">'+i.name+'</div>';
+          if(i.variation) html+='<div style="font-size:12px;color:var(--primary)">› '+i.variation+'</div>';
+          if(i.comment) html+='<div style="font-size:12px;color:var(--text-muted);font-style:italic">💬 '+i.comment+'</div>';
+          html+='</div>';
+          html+='<span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(i.cat)+'</span>';
+          html+='<span style="font-weight:600">€'+(i.price*i.qty).toFixed(2)+'</span></div>';
+        });
+      });
+      html+='</div></td></tr>';
+    }
   });
   html+='</tbody></table>';
   el.innerHTML=html;
+}
+
+function toggleHistDetail(k){
+  expandedHistKeys[k]=!expandedHistKeys[k];
+  renderHistoryTable();
+}
+
+function reopenAsServed(table, name){
+  if(!confirm('Tafel '+table+' terugzetten naar status "Geserveerd"?')) return;
+  state.orders.filter(function(o){return o.table==table&&o.name===name;}).forEach(function(o){
+    o.paid=false;
+    o.items.forEach(function(i){i.served=true;});
+    if(state.fbUrl&&o.fbId) fbPut('/orders/'+o.fbId,o);
+  });
+  notify('Tafel teruggezet naar "Geserveerd"');renderAll();
+}
+
+function reopenAsOpen(table, name){
+  if(!confirm('Tafel '+table+' terugzetten naar status "Open"?')) return;
+  state.orders.filter(function(o){return o.table==table&&o.name===name;}).forEach(function(o){
+    o.paid=false;
+    o.items.forEach(function(i){i.served=false;});
+    if(state.fbUrl&&o.fbId) fbPut('/orders/'+o.fbId,o);
+  });
+  notify('Tafel teruggezet naar "Open"');renderAll();
+}
+
+function deleteHistGroup(table, name){
+  if(!confirm('Bestelling van tafel '+table+' permanent verwijderen?')) return;
+  var toDelete=state.orders.filter(function(o){return o.table==table&&o.name===name;});
+  toDelete.forEach(function(o){if(state.fbUrl&&o.fbId) fbDel('/orders/'+o.fbId);});
+  state.orders=state.orders.filter(function(o){return !(o.table==table&&o.name===name);});
+  notify('Verwijderd');renderAll();
 }
 
 function clearHistory(){
