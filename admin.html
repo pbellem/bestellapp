@@ -257,6 +257,7 @@ var state = {
 };
 
 var pollTimer = null;
+var settingsLoadedFromFb = false;
 var selectedColor = 'blue';
 var selectedCatPrinters = [];
 var editItemId = null, editCatId = null, editPrinterId = null;
@@ -300,6 +301,7 @@ function fetchAll(){
         if(settings.nextPid) state.nextPid=settings.nextPid;
         if(settings.nextCid) state.nextCid=settings.nextCid;
       }
+      settingsLoadedFromFb = true;
       renderAll();
     })
     .catch(function(){setSyncStatus('err');});
@@ -307,6 +309,10 @@ function fetchAll(){
 
 function pushSettings(){
   if(!state.fbUrl) return;
+  if(!settingsLoadedFromFb){
+    console.warn('[Settings] Niet pushen: nog niet gesynchroniseerd met Firebase');
+    return;
+  }
   fbPut('/settings',{printers:state.printers,categories:state.categories,staff:state.staff,menu:state.menu,nextMid:state.nextMid,nextPid:state.nextPid,nextCid:state.nextCid}).catch(function(){});
 }
 
