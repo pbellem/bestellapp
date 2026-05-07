@@ -450,9 +450,17 @@ function saveLocal(){try{localStorage.setItem('pr4',JSON.stringify(state));}catc
 function loadLocal(){try{var s=localStorage.getItem('pr4');if(s)state=JSON.parse(s);}catch(e){}}
 loadLocal();
 
+var settingsLoadedFromFb = false;
+
 // Push full settings to Firebase
 function pushSettings(){
   if(!state.fbUrl) return;
+  // Niet pushen voor we tenminste 1x van Firebase hebben opgehaald
+  // (anders overschrijven we serverdata met lokale defaults)
+  if(!settingsLoadedFromFb){
+    console.warn('[Settings] Niet pushen: nog niet gesynchroniseerd met Firebase');
+    return;
+  }
   var settings={
     printers: state.printers,
     categories: state.categories,
@@ -480,7 +488,16 @@ function fetchSettings(cb){
         if(data.nextPid) state.nextPid=data.nextPid;
         if(data.nextCid) state.nextCid=data.nextCid;
         saveLocal();
+      } else {
+        // Firebase is leeg — push huidige defaults zodat andere toestellen ze krijgen
+        var initial={
+          printers: state.printers, categories: state.categories,
+          staff: state.staff, menu: state.menu,
+          nextMid: state.nextMid, nextPid: state.nextPid, nextCid: state.nextCid
+        };
+        fetch(state.fbUrl+'/settings.json',{method:'PUT',body:JSON.stringify(initial)}).catch(function(){});
       }
+      settingsLoadedFromFb = true;
       if(cb) cb();
     })
     .catch(function(){if(cb)cb();});
@@ -518,8 +535,8 @@ function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
   fetchSettings(function(){
     renderAfterSync();
+    fetchFromFirebase();
   });
-  fetchFromFirebase();
   pollTimer = setInterval(function(){
     fetchSettings(function(){ renderAfterSync(); });
     fetchFromFirebase();
@@ -529,7 +546,16 @@ function startPolling(){
 function renderAfterSync(){
   var cur=document.querySelector('.screen.active');
   if(!cur) return;
-  if(cur.id==='s-admin'){renderAdminMenu();renderPrinters();renderCats();renderStaff();}
+  if(cur.id==='s-admin'){
+    renderAdminMenu();
+    renderPrinters();
+    renderCats();
+    renderStaff();
+    renderFbConfig();
+  }
+  if(cur.id==='s-orders') renderOrders();
+  if(cur.id==='s-history') renderHistory();
+  if(cur.id==='s-menu-browse') renderMenuBrowse();
 }
 function fetchFromFirebase(){
   if(!state.fbUrl) return;
@@ -595,8 +621,10 @@ function pp(d){
       if(!name&&!match.isAdmin){document.getElementById('pin-err').textContent='Vul uw naam in.';currentPin='';updPin();return;}
       currentWaiter=name||match.name; currentRole=match.isAdmin?'admin':'staff';
       currentPin='';updPin();
+      // Start polling als Firebase URL is ingesteld
+      if(state.fbUrl) initFirebase(state.fbUrl);
       if(currentRole==='admin') go('s-admin');
-      else{if(state.fbUrl)initFirebase(state.fbUrl);go('s-orders');}
+      else go('s-orders');
     } else if(currentPin.length>=6){document.getElementById('pin-err').textContent='Onjuiste PIN.';currentPin='';updPin();}
   }
 }
