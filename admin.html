@@ -3,241 +3,436 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Popup Restaurant — Admin Dashboard</title>
+<title>Popup Restaurant — Admin</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#1a1a1a;min-height:100vh}
-.topbar{background:#1e293b;color:#fff;padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;position:sticky;top:0;z-index:100}
-.topbar h1{font-size:18px;font-weight:700;flex:1}
-.topbar .tab{padding:8px 16px;border-radius:6px;cursor:pointer;font-size:14px;color:#94a3b8;transition:all .15s}
-.topbar .tab:hover{color:#fff;background:#334155}
-.topbar .tab.active{color:#fff;background:#2563eb}
-.sync-badge{font-size:12px;padding:4px 10px;border-radius:20px;background:#334155;color:#94a3b8;display:flex;align-items:center;gap:6px}
+:root{
+  --bg:#f8fafc;
+  --surface:#ffffff;
+  --border:#e2e8f0;
+  --border-strong:#cbd5e1;
+  --text:#0f172a;
+  --text-muted:#64748b;
+  --primary:#2563eb;
+  --primary-soft:#eff6ff;
+  --success:#16a34a;
+  --warning:#f59e0b;
+  --danger:#dc2626;
+  --radius:10px;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:#0f172a;color:#e2e8f0;padding:20px 0;display:flex;flex-direction:column}
+.sidebar-brand{padding:0 20px 24px;font-size:18px;font-weight:700;color:#fff;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1e293b;margin-bottom:16px}
+.nav{flex:1}
+.nav-item{padding:11px 20px;cursor:pointer;display:flex;align-items:center;gap:12px;font-size:14px;color:#94a3b8;border-left:3px solid transparent;transition:all .12s}
+.nav-item:hover{background:#1e293b;color:#fff}
+.nav-item.active{background:#1e293b;color:#fff;border-left-color:var(--primary)}
+.nav-icon{font-size:18px}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid #1e293b;font-size:12px;color:#64748b}
+.sync-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
 .sync-dot.ok{background:#22c55e}
 .sync-dot.err{background:#dc2626}
-.page{display:none;padding:24px}
+
+/* MAIN */
+.main{padding:24px 32px;overflow-y:auto;max-height:100vh}
+.page{display:none}
 .page.active{display:block}
-.grid{display:grid;gap:16px}
-.grid-2{grid-template-columns:1fr 1fr}
-.grid-3{grid-template-columns:1fr 1fr 1fr}
-.grid-4{grid-template-columns:repeat(4,1fr)}
-.card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:20px}
-.card-title{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
-.stat-val{font-size:32px;font-weight:800}
-.stat-label{font-size:13px;color:#64748b;margin-top:4px}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#e5e5e5;color:#555}
-.btn{padding:8px 16px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer}
-.btn-primary{background:#2563eb;color:#fff}
-.btn-secondary{background:#fff;color:#2563eb;border:1.5px solid #2563eb}
-.btn-danger{background:#dc2626;color:#fff}
-.btn-success{background:#16a34a;color:#fff}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.page-title{font-size:24px;font-weight:700}
+.page-subtitle{font-size:13px;color:var(--text-muted);margin-top:2px}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.kpi-label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.kpi-value{font-size:28px;font-weight:700;color:var(--text)}
+.kpi-value.green{color:var(--success)}
+.kpi-icon{float:right;font-size:24px;opacity:.3}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#fafbfc}
+.card-title{font-size:14px;font-weight:600}
+.card-body{padding:18px}
+.card-body.dense{padding:0}
+
+/* SPLIT VIEW */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.split-3{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+
+/* BUTTONS */
+.btn{padding:8px 14px;border-radius:8px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .12s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-secondary{background:var(--surface);color:var(--primary);border-color:var(--primary)}
+.btn-secondary:hover{background:var(--primary-soft)}
+.btn-ghost{background:transparent;color:var(--text-muted)}
+.btn-ghost:hover{background:#f1f5f9;color:var(--text)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#15803d}
 .btn-sm{padding:5px 10px;font-size:12px}
-.btn:active{opacity:.8}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th{text-align:left;padding:10px 12px;font-size:12px;font-weight:600;color:#64748b;border-bottom:2px solid #e2e8f0;background:#f8fafc}
-td{padding:10px 12px;border-bottom:1px solid #f1f5f9;vertical-align:top}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#f8fafc}
-.inp{width:100%;padding:9px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:14px;background:#fff;margin-bottom:10px}
-.inp:focus{outline:none;border-color:#2563eb}
-label{font-size:13px;color:#555;margin-bottom:4px;display:block}
-.order-card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:14px;margin-bottom:10px;transition:box-shadow .15s}
-.order-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
-.order-card.paid{opacity:.5}
-.status-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
-.pill-open{background:#f0fdf4;color:#16a34a}
-.pill-partial{background:#fffbeb;color:#d97706}
-.pill-served{background:#eff6ff;color:#2563eb}
-.pill-paid{background:#f1f5f9;color:#64748b}
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
+.btn-icon{padding:5px 8px;font-size:13px}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 14px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid var(--border)}
+td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#fafbfc}
+.col-actions{text-align:right;width:120px;white-space:nowrap}
+
+/* INPUTS */
+.inp{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border-strong);font-size:14px;background:var(--surface);font-family:inherit}
+.inp:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--text-muted);font-weight:500;margin-bottom:4px}
+
+/* BADGE */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#e5e5e5;color:#555}
+.status{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.status-open{background:#ecfdf5;color:#16a34a}
+.status-partial{background:#fffbeb;color:#d97706}
+.status-served{background:#eff6ff;color:#2563eb}
+.status-paid{background:#f1f5f9;color:#64748b}
+
+/* ORDER LIST */
+.order-row{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:14px;transition:background .1s}
+.order-row:hover{background:#fafbfc}
+.order-row:last-child{border-bottom:none}
+.order-row.selected{background:var(--primary-soft);border-left:3px solid var(--primary);padding-left:13px}
+.order-avatar{width:40px;height:40px;border-radius:50%;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.order-info{flex:1;min-width:0}
+.order-title{font-weight:600;font-size:14px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.order-meta{font-size:12px;color:var(--text-muted);display:flex;gap:10px;align-items:center}
+.waiter-tag{font-size:10px;background:#f1f5f9;color:var(--text-muted);padding:2px 6px;border-radius:8px}
+
+/* DETAIL PANEL */
+.detail-empty{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.detail-empty .icon{font-size:48px;margin-bottom:12px;opacity:.4}
+
+/* ITEM ROW IN DETAIL */
+.detail-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.detail-item:last-child{border-bottom:none}
+.qty-pill{font-weight:700;font-size:13px;background:var(--primary-soft);color:var(--primary);padding:2px 8px;border-radius:6px;min-width:32px;text-align:center}
+.served-tick{cursor:pointer;width:22px;height:22px;border-radius:6px;border:2px solid var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;transition:all .1s}
+.served-tick:hover{border-color:var(--primary)}
+.served-tick.on{background:var(--success);border-color:var(--success);color:#fff}
+
+/* ROUND HEADER */
+.round-header{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 0;border-bottom:1px dashed var(--border);margin-bottom:6px}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
 .modal-bg.open{display:flex}
-.modal{background:#fff;border-radius:16px;padding:28px;width:500px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
-.modal h2{font-size:18px;font-weight:700;margin-bottom:20px}
-.modal-footer{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
-.chkrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5;cursor:pointer}
-.chkbox{width:20px;height:20px;border-radius:5px;border:2px solid #d1d5db;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
-.chkbox.on{background:#2563eb;border-color:#2563eb;color:#fff}
-.color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent}
-.color-swatch.sel{border-color:#1e293b}
-.notif{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
-.notif.show{opacity:1}
-.waiter-tag{font-size:11px;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:10px}
-.section-divider{height:1px;background:#e2e8f0;margin:20px 0}
+.modal{background:var(--surface);border-radius:14px;padding:24px;width:480px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)}
+.modal-header{font-size:18px;font-weight:700;margin-bottom:18px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* COLOR PICKER */
+.color-grid{display:flex;gap:8px;flex-wrap:wrap}
+.color-swatch{width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .1s}
+.color-swatch:hover{transform:scale(1.1)}
+.color-swatch.sel{border-color:#0f172a}
+
+/* CHECKBOX LIST */
+.chk-list{border:1px solid var(--border);border-radius:8px;padding:4px 0;max-height:200px;overflow-y:auto}
+.chk-row{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;font-size:14px}
+.chk-row:hover{background:#fafbfc}
+.chkbox{width:18px;height:18px;border-radius:4px;border:2px solid var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;color:#fff}
+.chkbox.on{background:var(--primary);border-color:var(--primary)}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;gap:10px}
+.toggle{position:relative;width:42px;height:24px;background:var(--border-strong);border-radius:24px;cursor:pointer;transition:background .15s}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.toggle.on{background:var(--primary)}
+.toggle.on::after{left:20px}
+
+/* NOTIFICATION */
+.notif{position:fixed;top:16px;right:16px;background:var(--text);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:300;opacity:0;transition:opacity .25s,transform .25s;transform:translateY(-10px);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.notif.show{opacity:1;transform:translateY(0)}
+
+/* COLOR DOT FOR CATEGORY */
+.cat-dot{width:14px;height:14px;border-radius:50%;display:inline-block;flex-shrink:0;border:2px solid currentColor}
+
+.empty-table{text-align:center;padding:32px;color:var(--text-muted);font-size:13px}
+
+.filter-tabs{display:flex;gap:6px}
+.filter-tab{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-muted)}
+.filter-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 </style>
 </head>
 <body>
 <div id="notif" class="notif"></div>
 
-<div class="topbar">
-  <h1>🍽️ Popup Restaurant</h1>
-  <div class="tab active" onclick="showPage('p-orders')">📋 Orders</div>
-  <div class="tab" onclick="showPage('p-menu')">🍽️ Menu</div>
-  <div class="tab" onclick="showPage('p-settings')">⚙️ Instellingen</div>
-  <div class="sync-badge"><span class="sync-dot" id="sync-dot"></span><span id="sync-txt">Verbinden...</span></div>
-</div>
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">🍽️ Restaurant</div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="p-orders" onclick="showPage('p-orders',this)"><span class="nav-icon">📋</span>Bestellingen</div>
+      <div class="nav-item" data-page="p-history" onclick="showPage('p-history',this)"><span class="nav-icon">🕐</span>Historiek</div>
+      <div class="nav-item" data-page="p-menu" onclick="showPage('p-menu',this)"><span class="nav-icon">🍽️</span>Menu</div>
+      <div class="nav-item" data-page="p-categories" onclick="showPage('p-categories',this)"><span class="nav-icon">🗂️</span>Categorieën</div>
+      <div class="nav-item" data-page="p-printers" onclick="showPage('p-printers',this)"><span class="nav-icon">🖨️</span>Printers</div>
+      <div class="nav-item" data-page="p-staff" onclick="showPage('p-staff',this)"><span class="nav-icon">👥</span>Medewerkers</div>
+      <div class="nav-item" data-page="p-settings" onclick="showPage('p-settings',this)"><span class="nav-icon">⚙️</span>Instellingen</div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sync-row"><span class="sync-dot" id="sync-dot"></span><span id="sync-txt">Niet verbonden</span></div>
+      <div id="last-sync" style="font-size:11px;color:#475569"></div>
+    </div>
+  </aside>
 
-<!-- ORDERS PAGE -->
-<div id="p-orders" class="page active">
-  <div class="grid grid-4" style="margin-bottom:20px" id="stats-row">
-    <div class="card"><div class="stat-val" id="stat-open">—</div><div class="stat-label">Open tafels</div></div>
-    <div class="card"><div class="stat-val" id="stat-served">—</div><div class="stat-label">Alles geserveerd</div></div>
-    <div class="card"><div class="stat-val" id="stat-paid">—</div><div class="stat-label">Betaald</div></div>
-    <div class="card"><div class="stat-val" id="stat-revenue" style="color:#16a34a">€—</div><div class="stat-label">Omzet</div></div>
-  </div>
-  <div class="grid grid-2">
-    <div>
-      <div class="card-title" style="margin-bottom:12px">
-        <span style="font-size:15px;font-weight:700">Actieve tafels</span>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-sm" id="filter-all" onclick="setFilter('all')" style="background:#2563eb;color:#fff">Alle</button>
-          <button class="btn btn-sm btn-secondary" id="filter-open" onclick="setFilter('open')">Open</button>
-          <button class="btn btn-sm btn-secondary" id="filter-served" onclick="setFilter('served')">Geserveerd</button>
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ORDERS -->
+    <section id="p-orders" class="page active">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Bestellingen</div>
+          <div class="page-subtitle">Live overzicht van alle actieve tafels</div>
         </div>
       </div>
-      <div id="orders-list"></div>
-    </div>
-    <div id="order-detail-panel">
-      <div class="card" style="text-align:center;padding:60px 20px;color:#94a3b8">
-        <div style="font-size:48px;margin-bottom:12px">👈</div>
-        <div>Selecteer een tafel om details te zien</div>
-      </div>
-    </div>
-  </div>
-  <div style="margin-top:20px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <span style="font-size:15px;font-weight:700">Historiek (betaald)</span>
-      <button class="btn btn-danger btn-sm" onclick="clearHistory()">Wis historiek</button>
-    </div>
-    <div class="card"><div id="history-table"></div></div>
-  </div>
-</div>
 
-<!-- MENU PAGE -->
-<div id="p-menu" class="page">
-  <div class="grid grid-2">
-    <!-- Menu items -->
-    <div class="card">
-      <div class="card-title">
-        Menu items
-        <button class="btn btn-primary btn-sm" onclick="openItemModal()">+ Item</button>
+      <div class="kpi-grid">
+        <div class="kpi"><span class="kpi-icon">📋</span><div class="kpi-label">Open tafels</div><div class="kpi-value" id="kpi-open">—</div></div>
+        <div class="kpi"><span class="kpi-icon">⏳</span><div class="kpi-label">In wachtrij</div><div class="kpi-value" id="kpi-queue">—</div></div>
+        <div class="kpi"><span class="kpi-icon">✓</span><div class="kpi-label">Geserveerd</div><div class="kpi-value" id="kpi-served">—</div></div>
+        <div class="kpi"><span class="kpi-icon">💶</span><div class="kpi-label">Omzet vandaag</div><div class="kpi-value green" id="kpi-revenue">€—</div></div>
       </div>
-      <table>
-        <thead><tr><th>Naam</th><th>Prijs</th><th>Categorie</th><th>Variaties</th><th></th></tr></thead>
-        <tbody id="menu-table"></tbody>
-      </table>
-    </div>
-    <!-- Categorieën -->
-    <div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-title">
-          Categorieën
-          <button class="btn btn-primary btn-sm" onclick="openCatModal()">+ Categorie</button>
+
+      <div class="split-3">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Actieve tafels</span>
+            <div class="filter-tabs">
+              <button class="filter-tab active" data-filter="all" onclick="setFilter('all',this)">Alle</button>
+              <button class="filter-tab" data-filter="open" onclick="setFilter('open',this)">Open</button>
+              <button class="filter-tab" data-filter="served" onclick="setFilter('served',this)">Geserveerd</button>
+            </div>
+          </div>
+          <div class="card-body dense" id="orders-list"></div>
         </div>
-        <div id="cat-table"></div>
+        <div id="detail-panel">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Detail</span></div>
+            <div class="card-body">
+              <div class="detail-empty">
+                <div class="icon">👈</div>
+                <div>Selecteer een tafel</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <!-- Printers -->
+    </section>
+
+    <!-- HISTORIEK -->
+    <section id="p-history" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Historiek</div>
+          <div class="page-subtitle">Alle afgesloten bestellingen</div>
+        </div>
+        <button class="btn btn-danger" onclick="clearHistory()">🗑 Historiek wissen</button>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Tafels betaald</div><div class="kpi-value" id="hist-count">—</div></div>
+        <div class="kpi"><div class="kpi-label">Items verkocht</div><div class="kpi-value" id="hist-items">—</div></div>
+        <div class="kpi"><div class="kpi-label">Gem. orderwaarde</div><div class="kpi-value" id="hist-avg">€—</div></div>
+        <div class="kpi"><div class="kpi-label">Totale omzet</div><div class="kpi-value green" id="hist-total">€—</div></div>
+      </div>
+
       <div class="card">
-        <div class="card-title">
-          Printers
-          <button class="btn btn-primary btn-sm" onclick="openPrinterModal()">+ Printer</button>
+        <div class="card-header"><span class="card-title">Afgesloten bestellingen</span></div>
+        <div class="card-body dense"><div id="history-table"></div></div>
+      </div>
+    </section>
+
+    <!-- MENU -->
+    <section id="p-menu" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Menu</div>
+          <div class="page-subtitle">Beheer alle gerechten en dranken</div>
         </div>
-        <div id="printer-table"></div>
+        <button class="btn btn-primary" onclick="openItemModal()">+ Nieuw item</button>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- SETTINGS PAGE -->
-<div id="p-settings" class="page">
-  <div class="grid grid-2">
-    <div class="card">
-      <div class="card-title">Firebase</div>
-      <label>Database URL</label>
-      <input type="text" class="inp" id="fb-url" placeholder="https://jouw-project.firebaseio.com">
-      <button class="btn btn-primary" onclick="saveFbUrl()">Opslaan &amp; verbinden</button>
-    </div>
-    <div class="card">
-      <div class="card-title">
-        Medewerkers
-        <button class="btn btn-primary btn-sm" onclick="openStaffModal()">+ Medewerker</button>
+      <div class="card">
+        <div class="card-body dense">
+          <table>
+            <thead><tr><th>Item</th><th>Prijs</th><th>Categorie</th><th>Variaties</th><th class="col-actions">Acties</th></tr></thead>
+            <tbody id="menu-table"></tbody>
+          </table>
+        </div>
       </div>
-      <table>
-        <thead><tr><th>Naam</th><th>PIN</th><th>Rol</th><th></th></tr></thead>
-        <tbody id="staff-table"></tbody>
-      </table>
-    </div>
-  </div>
+    </section>
+
+    <!-- CATEGORIEËN -->
+    <section id="p-categories" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Categorieën</div>
+          <div class="page-subtitle">Groepeer items en koppel ze aan printers</div>
+        </div>
+        <button class="btn btn-primary" onclick="openCatModal()">+ Nieuwe categorie</button>
+      </div>
+      <div class="card">
+        <div class="card-body dense">
+          <table>
+            <thead><tr><th>Naam</th><th>Aantal items</th><th>Printers</th><th class="col-actions">Acties</th></tr></thead>
+            <tbody id="cat-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRINTERS -->
+    <section id="p-printers" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Printers</div>
+          <div class="page-subtitle">Configuratie van netwerkprinters</div>
+        </div>
+        <button class="btn btn-primary" onclick="openPrinterModal()">+ Nieuwe printer</button>
+      </div>
+      <div class="card">
+        <div class="card-body dense">
+          <table>
+            <thead><tr><th>Naam</th><th>IP-adres</th><th>Type</th><th>Gekoppelde categorieën</th><th class="col-actions">Acties</th></tr></thead>
+            <tbody id="printer-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- MEDEWERKERS -->
+    <section id="p-staff" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Medewerkers</div>
+          <div class="page-subtitle">PIN-codes voor de mobiele app</div>
+        </div>
+        <button class="btn btn-primary" onclick="openStaffModal()">+ Nieuwe medewerker</button>
+      </div>
+      <div class="card">
+        <div class="card-body dense">
+          <table>
+            <thead><tr><th>Naam</th><th>PIN</th><th>Rol</th><th class="col-actions">Acties</th></tr></thead>
+            <tbody id="staff-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="p-settings" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Instellingen</div>
+          <div class="page-subtitle">Configuratie van de applicatie</div>
+        </div>
+      </div>
+      <div class="split">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Firebase synchronisatie</span></div>
+          <div class="card-body">
+            <div class="field">
+              <label>Database URL</label>
+              <input type="text" class="inp" id="fb-url" placeholder="https://jouw-project.firebaseio.com">
+            </div>
+            <button class="btn btn-primary" onclick="saveFbUrl()">Opslaan en verbinden</button>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:14px;line-height:1.5">De URL wordt opgeslagen in deze browser en bij elke wijziging gesynchroniseerd met alle gekoppelde toestellen.</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Status</span></div>
+          <div class="card-body">
+            <div class="field">
+              <label>Verbindingsstatus</label>
+              <div style="font-size:14px"><span class="sync-dot" id="sync-dot-2" style="margin-right:6px"></span><span id="sync-txt-2">—</span></div>
+            </div>
+            <div class="field">
+              <label>Laatste synchronisatie</label>
+              <div style="font-size:14px" id="last-sync-2">—</div>
+            </div>
+            <div class="field">
+              <label>Aantal actieve orders</label>
+              <div style="font-size:14px" id="settings-active-count">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 </div>
 
-<!-- MODAL: Order detail / bewerken -->
-<div class="modal-bg" id="m-order">
-  <div class="modal" style="width:600px">
-    <h2 id="m-order-title">Order</h2>
-    <div id="m-order-content"></div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="cm('m-order')">Sluiten</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: Menu item -->
+<!-- MODAL: ITEM -->
 <div class="modal-bg" id="m-item">
   <div class="modal">
-    <h2 id="m-item-title">Menu item</h2>
-    <label>Naam</label><input type="text" class="inp" id="i-name" placeholder="bv. Steak frites">
-    <label>Prijs (€)</label><input type="number" class="inp" id="i-price" placeholder="12.50" step="0.01" min="0">
-    <label>Categorie</label><select class="inp" id="i-cat"></select>
-    <label>Variaties (komma-gescheiden)</label><input type="text" class="inp" id="i-vars" placeholder="bv. Saignant, À point, Bien cuit">
+    <div class="modal-header" id="m-item-title">Menu item</div>
+    <div class="field"><label>Naam</label><input type="text" class="inp" id="i-name" placeholder="bv. Steak frites"></div>
+    <div class="field"><label>Prijs (€)</label><input type="number" class="inp" id="i-price" placeholder="12.50" step="0.01" min="0"></div>
+    <div class="field"><label>Categorie</label><select class="inp" id="i-cat"></select></div>
+    <div class="field"><label>Variaties (komma-gescheiden, optioneel)</label><input type="text" class="inp" id="i-vars" placeholder="bv. Saignant, À point, Bien cuit"></div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="cm('m-item')">Annuleer</button>
+      <button class="btn btn-ghost" onclick="cm('m-item')">Annuleer</button>
       <button class="btn btn-primary" onclick="saveItem()">Opslaan</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Categorie -->
+<!-- MODAL: CATEGORIE -->
 <div class="modal-bg" id="m-cat">
   <div class="modal">
-    <h2 id="m-cat-title">Categorie</h2>
-    <label>Naam</label><input type="text" class="inp" id="c-name" placeholder="bv. Warme keuken">
-    <label>Kleur</label>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="c-colors"></div>
-    <label>Printers</label>
-    <div id="c-printers" style="margin-bottom:12px"></div>
+    <div class="modal-header" id="m-cat-title">Categorie</div>
+    <div class="field"><label>Naam</label><input type="text" class="inp" id="c-name" placeholder="bv. Warme keuken"></div>
+    <div class="field"><label>Kleur</label><div class="color-grid" id="c-colors"></div></div>
+    <div class="field"><label>Stuur orders naar deze printer(s)</label><div class="chk-list" id="c-printers"></div></div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="cm('m-cat')">Annuleer</button>
+      <button class="btn btn-ghost" onclick="cm('m-cat')">Annuleer</button>
       <button class="btn btn-primary" onclick="saveCat()">Opslaan</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Printer -->
+<!-- MODAL: PRINTER -->
 <div class="modal-bg" id="m-printer">
   <div class="modal">
-    <h2 id="m-printer-title">Printer</h2>
-    <label>Naam</label><input type="text" class="inp" id="p-name" placeholder="bv. Keuken">
-    <label>IP-adres</label><input type="text" class="inp" id="p-ip" placeholder="192.168.1.10">
-    <label>Kassaprinter (drukt rekeningen af)</label>
-    <div style="display:flex;gap:10px;margin-bottom:12px">
-      <button id="p-bill-y" class="btn btn-sm btn-secondary" onclick="setBill(true)" style="flex:1">✓ Ja</button>
-      <button id="p-bill-n" class="btn btn-sm btn-primary" onclick="setBill(false)" style="flex:1">Nee</button>
+    <div class="modal-header" id="m-printer-title">Printer</div>
+    <div class="field"><label>Naam</label><input type="text" class="inp" id="p-name" placeholder="bv. Keuken"></div>
+    <div class="field"><label>IP-adres</label><input type="text" class="inp" id="p-ip" placeholder="192.168.1.10"></div>
+    <div class="field">
+      <label>Type</label>
+      <div class="toggle-row">
+        <div class="toggle" id="p-bill-toggle" onclick="toggleBill()"></div>
+        <span style="font-size:14px">Kassaprinter (drukt rekeningen af)</span>
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="cm('m-printer')">Annuleer</button>
+      <button class="btn btn-ghost" onclick="cm('m-printer')">Annuleer</button>
       <button class="btn btn-primary" onclick="savePrinter()">Opslaan</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: Medewerker -->
+<!-- MODAL: STAFF -->
 <div class="modal-bg" id="m-staff">
   <div class="modal">
-    <h2>Medewerker toevoegen</h2>
-    <label>Naam</label><input type="text" class="inp" id="s-name" placeholder="bv. Sarah">
-    <label>PIN</label><input type="text" class="inp" id="s-pin" placeholder="bv. 5678" maxlength="6">
+    <div class="modal-header">Medewerker toevoegen</div>
+    <div class="field"><label>Naam</label><input type="text" class="inp" id="s-name" placeholder="bv. Sarah"></div>
+    <div class="field"><label>PIN-code</label><input type="text" class="inp" id="s-pin" placeholder="bv. 5678" maxlength="6"></div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="cm('m-staff')">Annuleer</button>
+      <button class="btn btn-ghost" onclick="cm('m-staff')">Annuleer</button>
       <button class="btn btn-primary" onclick="saveStaff()">Opslaan</button>
     </div>
   </div>
@@ -264,23 +459,27 @@ var editItemId = null, editCatId = null, editPrinterId = null;
 var isBillPrinter = false;
 var activeFilter = 'all';
 var selectedGroupKey = null;
+var lastSync = null;
 
-function notify(msg){var n=document.getElementById('notif');n.textContent=msg;n.classList.add('show');setTimeout(function(){n.classList.remove('show');},2200);}
+function notify(msg){var n=document.getElementById('notif');n.textContent=msg;n.classList.add('show');setTimeout(function(){n.classList.remove('show');},2000);}
 function om(id){document.getElementById(id).classList.add('open');}
 function cm(id){document.getElementById(id).classList.remove('open');}
 function esc(s){return String(s).replace(/'/g,"\\'");}
-function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
 // ── FIREBASE ──────────────────────────────────────────────
 function setSyncStatus(s){
   var dot=document.getElementById('sync-dot'),txt=document.getElementById('sync-txt');
-  if(s==='ok'){dot.className='sync-dot ok';txt.textContent='Verbonden';}
-  else if(s==='err'){dot.className='sync-dot err';txt.textContent='Verbindingsfout';}
-  else{dot.className='sync-dot';txt.textContent='Verbinden...';}
+  var dot2=document.getElementById('sync-dot-2'),txt2=document.getElementById('sync-txt-2');
+  var label, cls;
+  if(s==='ok'){cls='sync-dot ok';label='Verbonden';}
+  else if(s==='err'){cls='sync-dot err';label='Verbindingsfout';}
+  else{cls='sync-dot';label='Niet verbonden';}
+  dot.className=cls;txt.textContent=label;
+  if(dot2){dot2.className=cls;txt2.textContent=label;}
 }
 
 function fbGet(path){return fetch(state.fbUrl+path+'.json').then(function(r){return r.json();});}
-function fbPut(path,data){return fetch(state.fbUrl+path+'.json',{method:'PUT',body:JSON.stringify(data)}).then(function(r){return r.json();});}
+function fbPut(path,data){return fetch(state.fbUrl+path+'.json',{method:'PUT',body:JSON.stringify(data)});}
 function fbDel(path){return fetch(state.fbUrl+path+'.json',{method:'DELETE'});}
 
 function fetchAll(){
@@ -288,10 +487,11 @@ function fetchAll(){
   Promise.all([fbGet('/orders'), fbGet('/settings')])
     .then(function(results){
       setSyncStatus('ok');
+      lastSync = new Date();
+      updLastSync();
       var orders = results[0];
       var settings = results[1];
-      if(orders) state.orders = Object.values(orders);
-      else state.orders = [];
+      state.orders = orders ? Object.values(orders) : [];
       if(settings){
         if(settings.printers) state.printers=settings.printers;
         if(settings.categories) state.categories=settings.categories;
@@ -307,10 +507,17 @@ function fetchAll(){
     .catch(function(){setSyncStatus('err');});
 }
 
+function updLastSync(){
+  if(!lastSync) return;
+  var t=lastSync.toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var l1=document.getElementById('last-sync');if(l1) l1.textContent='Laatste sync: '+t;
+  var l2=document.getElementById('last-sync-2');if(l2) l2.textContent=t;
+}
+
 function pushSettings(){
   if(!state.fbUrl) return;
   if(!settingsLoadedFromFb){
-    console.warn('[Settings] Niet pushen: nog niet gesynchroniseerd met Firebase');
+    console.warn('[Settings] Niet pushen: nog niet gesynchroniseerd');
     return;
   }
   fbPut('/settings',{printers:state.printers,categories:state.categories,staff:state.staff,menu:state.menu,nextMid:state.nextMid,nextPid:state.nextPid,nextCid:state.nextCid}).catch(function(){});
@@ -325,141 +532,44 @@ function startPolling(){
 function saveFbUrl(){
   var url=document.getElementById('fb-url').value.trim();
   state.fbUrl=url.replace(/\/$/,'');
-  localStorage.setItem('dashboard-fb-url', state.fbUrl);
+  localStorage.setItem('admin-fb-url', state.fbUrl);
   if(state.fbUrl) startPolling();
   notify('Firebase URL opgeslagen');
 }
 
 // ── RENDER ALL ────────────────────────────────────────────
 function renderAll(){
-  renderStats();
+  renderKpis();
   renderOrdersList();
+  renderHistoryStats();
+  renderHistoryTable();
   renderMenuTable();
   renderCatTable();
   renderPrinterTable();
   renderStaffTable();
-  renderHistoryTable();
-  if(selectedGroupKey) renderDetailPanel(selectedGroupKey);
+  if(selectedGroupKey) renderDetailPanel();
+  var sa=document.getElementById('settings-active-count');
+  if(sa) sa.textContent=state.orders.filter(function(o){return !o.paid;}).length;
 }
 
-function showPage(id){
+function showPage(id, navEl){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
-  document.querySelectorAll('.topbar .tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
   document.getElementById(id).classList.add('active');
-  event.target.classList.add('active');
+  if(navEl) navEl.classList.add('active');
   renderAll();
 }
 
-// ── STATS ─────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────
 function getGroups(paidFilter){
   var groups={};
-  state.orders.filter(function(o){return paidFilter===undefined ? true : o.paid===paidFilter;}).forEach(function(o){
+  state.orders.filter(function(o){return paidFilter===undefined?true:o.paid===paidFilter;}).forEach(function(o){
     var k=o.table+'__'+o.name;
     if(!groups[k]) groups[k]={table:o.table,name:o.name,orders:[],lastTs:0};
     groups[k].orders.push(o);
     if(o.ts>groups[k].lastTs) groups[k].lastTs=o.ts;
   });
   return Object.values(groups);
-}
-
-function renderStats(){
-  var active=getGroups(false);
-  var allServedCount=active.filter(function(g){var items=g.orders.flatMap(function(o){return o.items;});return items.length>0&&items.every(function(i){return i.served;});}).length;
-  var paidGroups=getGroups(true);
-  var revenue=state.orders.filter(function(o){return o.paid;}).reduce(function(s,o){return s+o.items.reduce(function(ss,i){return ss+i.price*i.qty;},0);},0);
-  document.getElementById('stat-open').textContent=active.length;
-  document.getElementById('stat-served').textContent=allServedCount;
-  document.getElementById('stat-paid').textContent=paidGroups.length;
-  document.getElementById('stat-revenue').textContent='€'+revenue.toFixed(2);
-}
-
-// ── ORDERS LIST ───────────────────────────────────────────
-function setFilter(f){
-  activeFilter=f;
-  ['all','open','served'].forEach(function(x){
-    var btn=document.getElementById('filter-'+x);
-    btn.style.background=x===f?'#2563eb':'#fff';
-    btn.style.color=x===f?'#fff':'#2563eb';
-    btn.style.border=x===f?'none':'1.5px solid #2563eb';
-  });
-  renderOrdersList();
-}
-
-function renderOrdersList(){
-  var el=document.getElementById('orders-list');
-  var active=getGroups(false);
-  var filtered=active.filter(function(g){
-    var items=g.orders.flatMap(function(o){return o.items;});
-    var allServed=items.length>0&&items.every(function(i){return i.served;});
-    var anyServed=items.some(function(i){return i.served;});
-    if(activeFilter==='open') return !anyServed;
-    if(activeFilter==='served') return allServed;
-    return true;
-  });
-  if(!filtered.length){el.innerHTML='<div style="text-align:center;padding:40px;color:#94a3b8">Geen actieve orders</div>';return;}
-  var html='';
-  filtered.forEach(function(g){
-    var items=g.orders.flatMap(function(o){return o.items;});
-    var allServed=items.length>0&&items.every(function(i){return i.served;});
-    var anyServed=items.some(function(i){return i.served;});
-    var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
-    var waiters=[];g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
-    var k=g.table+'__'+g.name;
-    var pill=allServed?'<span class="status-pill pill-served">✓ Alles geserveerd</span>':anyServed?'<span class="status-pill pill-partial">⏳ Gedeeltelijk</span>':'<span class="status-pill pill-open">● Open</span>';
-    var sel=selectedGroupKey===k?' style="border-color:#2563eb;box-shadow:0 0 0 2px #bfdbfe"':'';
-    html+='<div class="order-card" onclick="selectGroup(\''+esc(k)+'\')"'+sel+'>';
-    html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
-    html+='<div style="font-weight:700;font-size:15px">Tafel '+g.table+' — '+g.name+'</div>';
-    html+='<div style="flex:1"></div>'+pill+'</div>';
-    html+='<div style="display:flex;gap:12px;font-size:13px;color:#64748b">';
-    html+='<span>€'+total.toFixed(2)+'</span>';
-    if(waiters.length) html+='<span class="waiter-tag">👤 '+waiters.join(', ')+'</span>';
-    html+='</div></div>';
-  });
-  el.innerHTML=html;
-}
-
-function selectGroup(k){
-  selectedGroupKey=k;
-  renderOrdersList();
-  renderDetailPanel(k);
-}
-
-function renderDetailPanel(k){
-  var parts=k.split('__');var table=parts[0];var name=parts.slice(1).join('__');
-  var orders=state.orders.filter(function(o){return o.table==table&&o.name===name&&!o.paid;});
-  if(!orders.length){document.getElementById('order-detail-panel').innerHTML='<div class="card" style="text-align:center;padding:60px 20px;color:#94a3b8"><div style="font-size:48px;margin-bottom:12px">✅</div><div>Geen actieve orders voor deze tafel</div></div>';return;}
-  var allItems=orders.flatMap(function(o){return o.items;});
-  var total=allItems.reduce(function(s,i){return s+i.price*i.qty;},0);
-  var html='<div class="card">';
-  html+='<div style="font-size:16px;font-weight:700;margin-bottom:16px">Tafel '+table+' — '+name+'</div>';
-  orders.forEach(function(o){
-    html+='<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #f1f5f9">';
-    html+='<div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px;color:#64748b">';
-    html+='<span>'+new Date(o.ts).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})+'</span>';
-    html+='<span class="waiter-tag">👤 '+(o.waiter||'—')+'</span></div>';
-    o.items.forEach(function(i,idx){
-      var col=catColorById(i.cat);
-      html+='<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid #f8fafc">';
-      html+='<span style="font-weight:600;min-width:24px">'+i.qty+'×</span>';
-      html+='<div style="flex:1"><div>'+i.name+'</div>';
-      if(i.variation) html+='<div style="font-size:12px;color:#2563eb">› '+i.variation+'</div>';
-      if(i.comment) html+='<div style="font-size:12px;color:#64748b;font-style:italic">💬 '+i.comment+'</div>';
-      html+='</div>';
-      html+='<span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(i.cat)+'</span>';
-      html+='<span style="font-size:12px;margin-left:4px;color:'+(i.served?'#16a34a':'#f59e0b')+'">'+(i.served?'✓':'⏳')+'</span>';
-      html+='</div>';
-    });
-    html+='</div>';
-  });
-  html+='<div style="display:flex;justify-content:space-between;font-weight:700;font-size:16px;padding-top:8px">';
-  html+='<span>Totaal</span><span>€'+total.toFixed(2)+'</span></div>';
-  html+='<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">';
-  html+='<button class="btn btn-secondary btn-sm" onclick="markAllServed(\''+esc(table)+'\',\''+esc(name)+'\')">✓ Alles geserveerd</button>';
-  html+='<button class="btn btn-success btn-sm" onclick="markPaid(\''+esc(table)+'\',\''+esc(name)+'\')">💶 Markeer betaald</button>';
-  html+='<button class="btn btn-danger btn-sm" onclick="deleteGroup(\''+esc(table)+'\',\''+esc(name)+'\')">🗑 Verwijder</button>';
-  html+='</div></div>';
-  document.getElementById('order-detail-panel').innerHTML=html;
 }
 
 function catColorById(id){
@@ -470,118 +580,246 @@ function catColorById(id){
 }
 function catNameById(id){
   var cat=state.categories.find(function(c){return c.id===id;});
-  return cat?cat.name:id;
+  return cat?cat.name:'—';
+}
+function initials(name){return (name||'?').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();}
+
+// ── KPIs ──────────────────────────────────────────────────
+function renderKpis(){
+  var active=getGroups(false);
+  var allItems=state.orders.filter(function(o){return !o.paid;}).reduce(function(a,o){return a.concat(o.items);},[]);
+  var queue=allItems.filter(function(i){return !i.served;}).reduce(function(s,i){return s+i.qty;},0);
+  var served=allItems.filter(function(i){return i.served;}).reduce(function(s,i){return s+i.qty;},0);
+  var revenue=state.orders.filter(function(o){return o.paid;}).reduce(function(s,o){return s+o.items.reduce(function(ss,i){return ss+i.price*i.qty;},0);},0);
+  document.getElementById('kpi-open').textContent=active.length;
+  document.getElementById('kpi-queue').textContent=queue;
+  document.getElementById('kpi-served').textContent=served;
+  document.getElementById('kpi-revenue').textContent='€'+revenue.toFixed(2);
+}
+
+// ── ORDERS LIST ───────────────────────────────────────────
+function setFilter(f, btn){
+  activeFilter=f;
+  document.querySelectorAll('.filter-tab').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  renderOrdersList();
+}
+
+function renderOrdersList(){
+  var el=document.getElementById('orders-list');
+  var active=getGroups(false);
+  var filtered=active.filter(function(g){
+    var items=g.orders.reduce(function(a,o){return a.concat(o.items);},[]);
+    var allServed=items.length>0&&items.every(function(i){return i.served;});
+    var anyServed=items.some(function(i){return i.served;});
+    if(activeFilter==='open') return !anyServed;
+    if(activeFilter==='served') return allServed;
+    return true;
+  }).sort(function(a,b){return b.lastTs-a.lastTs;});
+
+  if(!filtered.length){el.innerHTML='<div class="empty-table">Geen actieve orders</div>';return;}
+  var html='';
+  filtered.forEach(function(g){
+    var items=g.orders.reduce(function(a,o){return a.concat(o.items);},[]);
+    var allServed=items.length>0&&items.every(function(i){return i.served;});
+    var anyServed=items.some(function(i){return i.served;});
+    var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
+    var waiters=[];g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
+    var k=g.table+'__'+g.name;
+    var status=allServed?'<span class="status status-served">✓ Geserveerd</span>':anyServed?'<span class="status status-partial">⏳ Bezig</span>':'<span class="status status-open">● Open</span>';
+    var sel=selectedGroupKey===k?' selected':'';
+    html+='<div class="order-row'+sel+'" onclick="selectGroup(\''+esc(k)+'\')">';
+    html+='<div class="order-avatar">'+initials(g.name)+'</div>';
+    html+='<div class="order-info"><div class="order-title">Tafel '+g.table+' — '+g.name+'</div>';
+    html+='<div class="order-meta">'+status+'<span>€'+total.toFixed(2)+'</span>';
+    if(waiters.length) html+='<span class="waiter-tag">👤 '+waiters.join(', ')+'</span>';
+    html+='</div></div></div>';
+  });
+  el.innerHTML=html;
+}
+
+function selectGroup(k){
+  selectedGroupKey=k;
+  renderOrdersList();
+  renderDetailPanel();
+}
+
+function renderDetailPanel(){
+  var el=document.getElementById('detail-panel');
+  if(!selectedGroupKey){el.innerHTML='';return;}
+  var parts=selectedGroupKey.split('__');var table=parts[0];var name=parts.slice(1).join('__');
+  var orders=state.orders.filter(function(o){return o.table==table&&o.name===name&&!o.paid;});
+  if(!orders.length){
+    selectedGroupKey=null;
+    el.innerHTML='<div class="card"><div class="card-body"><div class="detail-empty"><div class="icon">✅</div><div>Geen actieve orders</div></div></div></div>';
+    return;
+  }
+  var allItems=orders.reduce(function(a,o){return a.concat(o.items);},[]);
+  var total=allItems.reduce(function(s,i){return s+i.price*i.qty;},0);
+  var html='<div class="card"><div class="card-header"><span class="card-title">Tafel '+table+' — '+name+'</span><span style="font-size:13px;font-weight:700">€'+total.toFixed(2)+'</span></div><div class="card-body">';
+  orders.forEach(function(o,oidx){
+    var time=new Date(o.ts).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
+    html+='<div class="round-header"><span>Ronde '+(oidx+1)+' — '+time+'</span><span class="waiter-tag">👤 '+(o.waiter||'—')+'</span></div>';
+    o.items.forEach(function(i,iidx){
+      var col=catColorById(i.cat);
+      html+='<div class="detail-item">';
+      html+='<div class="served-tick '+(i.served?'on':'')+'" onclick="toggleItemServed(\''+esc(o.fbId||o.id)+'\','+iidx+')">'+(i.served?'✓':'')+'</div>';
+      html+='<div class="qty-pill">'+i.qty+'×</div>';
+      html+='<div style="flex:1"><div style="font-weight:500">'+i.name+'</div>';
+      if(i.variation) html+='<div style="font-size:12px;color:var(--primary)">› '+i.variation+'</div>';
+      if(i.comment) html+='<div style="font-size:12px;color:var(--text-muted);font-style:italic">💬 '+i.comment+'</div>';
+      html+='</div>';
+      html+='<span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(i.cat)+'</span>';
+      html+='<span style="font-weight:600">€'+(i.price*i.qty).toFixed(2)+'</span></div>';
+    });
+  });
+  html+='<div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">';
+  html+='<button class="btn btn-secondary btn-sm" onclick="markAllServed(\''+esc(table)+'\',\''+esc(name)+'\')">✓ Alles geserveerd</button>';
+  html+='<button class="btn btn-success btn-sm" onclick="markPaid(\''+esc(table)+'\',\''+esc(name)+'\')">💶 Markeer betaald</button>';
+  html+='<button class="btn btn-danger btn-sm" onclick="deleteGroup(\''+esc(table)+'\',\''+esc(name)+'\')">🗑 Verwijder</button>';
+  html+='</div></div></div>';
+  el.innerHTML=html;
+}
+
+function toggleItemServed(orderId, itemIdx){
+  var order=state.orders.find(function(o){return (o.fbId||String(o.id))===orderId;});
+  if(!order) return;
+  order.items[itemIdx].served=!order.items[itemIdx].served;
+  if(state.fbUrl&&order.fbId) fbPut('/orders/'+order.fbId,order);
+  renderAll();
 }
 
 function markAllServed(table,name){
   state.orders.filter(function(o){return o.table==table&&o.name===name&&!o.paid;}).forEach(function(o){
     o.items.forEach(function(i){i.served=true;});
-    if(state.fbUrl) fbPut('/orders/'+o.fbId,o).catch(function(){});
+    if(state.fbUrl&&o.fbId) fbPut('/orders/'+o.fbId,o);
   });
   notify('Alles geserveerd ✓');renderAll();
 }
 function markPaid(table,name){
   state.orders.filter(function(o){return o.table==table&&o.name===name;}).forEach(function(o){
     o.paid=true;
-    if(state.fbUrl) fbPut('/orders/'+o.fbId,o).catch(function(){});
+    if(state.fbUrl&&o.fbId) fbPut('/orders/'+o.fbId,o);
   });
-  selectedGroupKey=null;
-  notify('Betaald ✓');renderAll();
+  selectedGroupKey=null;notify('Betaald ✓');renderAll();
 }
 function deleteGroup(table,name){
-  if(!confirm('Alle orders voor deze tafel verwijderen?')) return;
+  if(!confirm('Alle orders voor tafel '+table+' verwijderen?')) return;
   var toDelete=state.orders.filter(function(o){return o.table==table&&o.name===name;});
-  toDelete.forEach(function(o){if(state.fbUrl&&o.fbId) fbDel('/orders/'+o.fbId).catch(function(){});});
+  toDelete.forEach(function(o){if(state.fbUrl&&o.fbId) fbDel('/orders/'+o.fbId);});
   state.orders=state.orders.filter(function(o){return !(o.table==table&&o.name===name);});
   selectedGroupKey=null;notify('Orders verwijderd');renderAll();
 }
 
-function clearHistory(){
-  if(!confirm('Historiek wissen?')) return;
-  var toDelete=state.orders.filter(function(o){return o.paid;});
-  toDelete.forEach(function(o){if(state.fbUrl&&o.fbId) fbDel('/orders/'+o.fbId).catch(function(){});});
-  state.orders=state.orders.filter(function(o){return !o.paid;});
-  notify('Historiek gewist');renderAll();
+// ── HISTORIEK ─────────────────────────────────────────────
+function renderHistoryStats(){
+  var paid=state.orders.filter(function(o){return o.paid;});
+  var groups=getGroups(true);
+  var items=paid.reduce(function(s,o){return s+o.items.reduce(function(ss,i){return ss+i.qty;},0);},0);
+  var total=paid.reduce(function(s,o){return s+o.items.reduce(function(ss,i){return ss+i.price*i.qty;},0);},0);
+  var avg=groups.length?total/groups.length:0;
+  var hc=document.getElementById('hist-count');if(hc)hc.textContent=groups.length;
+  var hi=document.getElementById('hist-items');if(hi)hi.textContent=items;
+  var ha=document.getElementById('hist-avg');if(ha)ha.textContent='€'+avg.toFixed(2);
+  var ht=document.getElementById('hist-total');if(ht)ht.textContent='€'+total.toFixed(2);
 }
 
 function renderHistoryTable(){
-  var el=document.getElementById('history-table');
-  var paid=getGroups(true).sort(function(a,b){return b.lastTs-a.lastTs;});
-  if(!paid.length){el.innerHTML='<p style="color:#94a3b8;font-size:14px;padding:8px 0">Geen afgeronde bestellingen</p>';return;}
-  var html='<table><thead><tr><th>Tafel</th><th>Naam</th><th>Opnemer(s)</th><th>Tijdstip</th><th>Totaal</th></tr></thead><tbody>';
-  paid.forEach(function(g){
-    var items=g.orders.flatMap(function(o){return o.items;});
+  var el=document.getElementById('history-table');if(!el)return;
+  var groups=getGroups(true).sort(function(a,b){return b.lastTs-a.lastTs;});
+  if(!groups.length){el.innerHTML='<div class="empty-table">Geen afgesloten bestellingen</div>';return;}
+  var html='<table><thead><tr><th>Tafel</th><th>Naam</th><th>Items</th><th>Opnemer(s)</th><th>Tijdstip</th><th style="text-align:right">Totaal</th></tr></thead><tbody>';
+  groups.forEach(function(g){
+    var items=g.orders.reduce(function(a,o){return a.concat(o.items);},[]);
+    var qty=items.reduce(function(s,i){return s+i.qty;},0);
     var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
     var waiters=[];g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
     var time=new Date(g.lastTs).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
-    html+='<tr><td>'+g.table+'</td><td>'+g.name+'</td><td>'+waiters.join(', ')+'</td><td>'+time+'</td><td style="font-weight:600">€'+total.toFixed(2)+'</td></tr>';
+    html+='<tr><td><strong>'+g.table+'</strong></td><td>'+g.name+'</td><td>'+qty+'</td><td>'+waiters.join(', ')+'</td><td>'+time+'</td><td style="text-align:right;font-weight:600">€'+total.toFixed(2)+'</td></tr>';
   });
   html+='</tbody></table>';
   el.innerHTML=html;
 }
 
+function clearHistory(){
+  if(!confirm('Alle betaalde bestellingen verwijderen?')) return;
+  var toDelete=state.orders.filter(function(o){return o.paid;});
+  toDelete.forEach(function(o){if(state.fbUrl&&o.fbId) fbDel('/orders/'+o.fbId);});
+  state.orders=state.orders.filter(function(o){return !o.paid;});
+  notify('Historiek gewist');renderAll();
+}
+
 // ── MENU ──────────────────────────────────────────────────
 function renderMenuTable(){
-  var el=document.getElementById('menu-table');
+  var el=document.getElementById('menu-table');if(!el)return;
+  if(!state.menu.length){el.innerHTML='<tr><td colspan="5" class="empty-table">Geen items</td></tr>';return;}
   var html='';
   state.menu.forEach(function(i){
     var col=catColorById(i.cat);
-    html+='<tr><td style="font-weight:500">'+i.name+'</td><td>€'+i.price.toFixed(2)+'</td>';
+    html+='<tr><td><strong>'+i.name+'</strong></td><td>€'+i.price.toFixed(2)+'</td>';
     html+='<td><span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(i.cat)+'</span></td>';
-    html+='<td style="font-size:12px;color:#64748b">'+(i.vars&&i.vars.length?i.vars.join(', '):'—')+'</td>';
-    html+='<td style="white-space:nowrap"><button class="btn btn-secondary btn-sm" style="margin-right:4px" onclick="openItemModal('+i.id+')">✎</button><button class="btn btn-danger btn-sm" onclick="delItem('+i.id+')">✕</button></td></tr>';
+    html+='<td style="color:var(--text-muted)">'+(i.vars&&i.vars.length?i.vars.join(', '):'—')+'</td>';
+    html+='<td class="col-actions"><button class="btn btn-ghost btn-icon" onclick="openItemModal('+i.id+')" title="Bewerken">✎</button> <button class="btn btn-ghost btn-icon" onclick="delItem('+i.id+')" title="Verwijderen" style="color:var(--danger)">✕</button></td></tr>';
   });
-  el.innerHTML=html||'<tr><td colspan="5" style="color:#94a3b8;text-align:center;padding:20px">Geen items</td></tr>';
+  el.innerHTML=html;
 }
 
+// ── CATEGORIEËN ───────────────────────────────────────────
 function renderCatTable(){
-  var el=document.getElementById('cat-table');
+  var el=document.getElementById('cat-table');if(!el)return;
+  if(!state.categories.length){el.innerHTML='<tr><td colspan="4" class="empty-table">Geen categorieën</td></tr>';return;}
   var html='';
   state.categories.forEach(function(c){
     var col=CAT_COLORS.find(function(x){return x.id===c.color;})||{bg:'#e5e5e5',text:'#555'};
+    var itemCount=state.menu.filter(function(i){return i.cat===c.id;}).length;
     var printerNames=(c.printers||[]).map(function(pid){var p=state.printers.find(function(x){return x.id===pid;});return p?p.name:'';}).filter(Boolean).join(', ');
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9">';
-    html+='<span style="width:14px;height:14px;border-radius:50%;background:'+col.bg+';border:2px solid '+col.text+';display:inline-block;flex-shrink:0"></span>';
-    html+='<div style="flex:1"><div style="font-weight:500;font-size:14px">'+c.name+'</div><div style="font-size:12px;color:#64748b">'+printerNames+'</div></div>';
-    html+='<button class="btn btn-secondary btn-sm" style="margin-right:4px" onclick="openCatModal(\''+esc(c.id)+'\')">✎</button>';
-    html+='<button class="btn btn-danger btn-sm" onclick="delCat(\''+esc(c.id)+'\')">✕</button></div>';
+    html+='<tr>';
+    html+='<td><span style="display:inline-flex;align-items:center;gap:8px"><span class="cat-dot" style="background:'+col.bg+';color:'+col.text+'"></span><strong>'+c.name+'</strong></span></td>';
+    html+='<td>'+itemCount+'</td>';
+    html+='<td>'+(printerNames||'<span style="color:var(--text-muted)">Geen</span>')+'</td>';
+    html+='<td class="col-actions"><button class="btn btn-ghost btn-icon" onclick="openCatModal(\''+esc(c.id)+'\')" title="Bewerken">✎</button> <button class="btn btn-ghost btn-icon" onclick="delCat(\''+esc(c.id)+'\')" title="Verwijderen" style="color:var(--danger)">✕</button></td>';
+    html+='</tr>';
   });
-  el.innerHTML=html||'<p style="color:#94a3b8;font-size:14px;padding:8px 0">Geen categorieën</p>';
+  el.innerHTML=html;
 }
 
+// ── PRINTERS ──────────────────────────────────────────────
 function renderPrinterTable(){
-  var el=document.getElementById('printer-table');
+  var el=document.getElementById('printer-table');if(!el)return;
+  if(!state.printers.length){el.innerHTML='<tr><td colspan="5" class="empty-table">Geen printers</td></tr>';return;}
   var html='';
   state.printers.forEach(function(p){
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9">';
-    html+='<div style="flex:1"><div style="font-weight:500;font-size:14px">'+p.name+(p.isBill?' <span style="font-size:11px;color:#6b21a8;background:#f3e8ff;padding:2px 6px;border-radius:10px">Kassa</span>':'')+'</div>';
-    html+='<div style="font-size:12px;color:#64748b">'+(p.ip||'Geen IP')+'</div></div>';
-    html+='<button class="btn btn-secondary btn-sm" style="margin-right:4px" onclick="openPrinterModal(\''+esc(p.id)+'\')">✎</button>';
-    html+='<button class="btn btn-danger btn-sm" onclick="delPrinter(\''+esc(p.id)+'\')">✕</button></div>';
+    var linkedCats=state.categories.filter(function(c){return (c.printers||[]).indexOf(p.id)!==-1;}).map(function(c){return c.name;}).join(', ');
+    html+='<tr><td><strong>'+p.name+'</strong></td><td>'+(p.ip||'<span style="color:var(--text-muted)">—</span>')+'</td>';
+    html+='<td>'+(p.isBill?'<span class="badge" style="background:#f3e8ff;color:#6b21a8">Kassa</span>':'<span class="badge">Ticket</span>')+'</td>';
+    html+='<td style="color:var(--text-muted)">'+(linkedCats||'—')+'</td>';
+    html+='<td class="col-actions"><button class="btn btn-ghost btn-icon" onclick="openPrinterModal(\''+esc(p.id)+'\')" title="Bewerken">✎</button> <button class="btn btn-ghost btn-icon" onclick="delPrinter(\''+esc(p.id)+'\')" title="Verwijderen" style="color:var(--danger)">✕</button></td></tr>';
   });
-  el.innerHTML=html||'<p style="color:#94a3b8;font-size:14px;padding:8px 0">Geen printers</p>';
+  el.innerHTML=html;
 }
 
+// ── STAFF ─────────────────────────────────────────────────
 function renderStaffTable(){
-  var el=document.getElementById('staff-table');
+  var el=document.getElementById('staff-table');if(!el)return;
+  if(!state.staff.length){el.innerHTML='<tr><td colspan="4" class="empty-table">Geen medewerkers</td></tr>';return;}
   var html='';
   state.staff.forEach(function(s,idx){
-    html+='<tr><td style="font-weight:500">'+s.name+'</td><td>'+s.pin+'</td><td>'+(s.isAdmin?'Admin':'Bediening')+'</td>';
-    html+='<td>'+(s.isAdmin?'':' <button class="btn btn-danger btn-sm" onclick="delStaff('+idx+')">✕</button>')+'</td></tr>';
+    html+='<tr><td><strong>'+s.name+'</strong></td><td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:12px">'+s.pin+'</code></td>';
+    html+='<td>'+(s.isAdmin?'<span class="badge" style="background:#fef3c7;color:#92400e">Admin</span>':'<span class="badge">Bediening</span>')+'</td>';
+    html+='<td class="col-actions">'+(s.isAdmin?'':'<button class="btn btn-ghost btn-icon" onclick="delStaff('+idx+')" title="Verwijderen" style="color:var(--danger)">✕</button>')+'</td></tr>';
   });
-  el.innerHTML=html||'<tr><td colspan="4" style="color:#94a3b8;text-align:center;padding:20px">Geen medewerkers</td></tr>';
+  el.innerHTML=html;
 }
 
 // ── ITEM MODAL ────────────────────────────────────────────
 function openItemModal(id){
   editItemId=id||null;
-  document.getElementById('m-item-title').textContent=id?'Menu item bewerken':'Menu item toevoegen';
+  document.getElementById('m-item-title').textContent=id?'Item bewerken':'Nieuw item';
   var item=id?state.menu.find(function(i){return i.id===id;}):null;
   document.getElementById('i-name').value=item?item.name:'';
   document.getElementById('i-price').value=item?item.price:'';
   document.getElementById('i-vars').value=item&&item.vars?item.vars.join(', '):'';
-  var catSel=document.getElementById('i-cat');
-  catSel.innerHTML=state.categories.map(function(c){return '<option value="'+c.id+'"'+(item&&item.cat===c.id?' selected':'')+'>'+c.name+'</option>';}).join('');
+  document.getElementById('i-cat').innerHTML=state.categories.map(function(c){return '<option value="'+c.id+'"'+(item&&item.cat===c.id?' selected':'')+'>'+c.name+'</option>';}).join('');
   om('m-item');
 }
 function saveItem(){
@@ -591,31 +829,37 @@ function saveItem(){
   if(!name||isNaN(price)){notify('Vul alle velden in');return;}
   if(editItemId){var item=state.menu.find(function(i){return i.id===editItemId;});if(item){item.name=name;item.price=price;item.cat=cat;item.vars=vars;}}
   else{state.menu.push({id:state.nextMid++,name:name,price:price,cat:cat,vars:vars});}
-  pushSettings();cm('m-item');renderMenuTable();notify('Item opgeslagen ✓');
+  pushSettings();cm('m-item');renderMenuTable();notify('Opgeslagen ✓');
 }
-function delItem(id){state.menu=state.menu.filter(function(i){return i.id!==id;});pushSettings();renderMenuTable();notify('Item verwijderd');}
+function delItem(id){
+  if(!confirm('Item verwijderen?')) return;
+  state.menu=state.menu.filter(function(i){return i.id!==id;});pushSettings();renderMenuTable();notify('Verwijderd');
+}
 
-// ── CATEGORIE MODAL ───────────────────────────────────────
+// ── CAT MODAL ─────────────────────────────────────────────
 function openCatModal(id){
   editCatId=id||null;
   var cat=id?state.categories.find(function(c){return c.id===id;}):null;
-  document.getElementById('m-cat-title').textContent=id?'Categorie bewerken':'Categorie toevoegen';
+  document.getElementById('m-cat-title').textContent=id?'Categorie bewerken':'Nieuwe categorie';
   document.getElementById('c-name').value=cat?cat.name:'';
   selectedColor=cat?cat.color:'blue';
   selectedCatPrinters=cat&&cat.printers?cat.printers.slice():[];
-  document.getElementById('c-colors').innerHTML=CAT_COLORS.map(function(c){
-    return '<div class="color-swatch '+(c.id===selectedColor?'sel':'')+'" style="background:'+c.bg+';border-color:'+(c.id===selectedColor?c.text:'transparent')+'" onclick="selColor(\''+c.id+'\')" title="'+c.id+'"></div>';
-  }).join('');
-  document.getElementById('c-printers').innerHTML=state.printers.map(function(p){
-    var on=selectedCatPrinters.indexOf(p.id)!==-1;
-    return '<div class="chkrow" onclick="togCatP(\''+esc(p.id)+'\')"><div class="chkbox '+(on?'on':'')+'" id="ccp-'+p.id+'">'+(on?'✓':'')+'</div><div style="font-size:14px">'+p.name+'<span style="font-size:12px;color:#64748b;margin-left:8px">'+(p.ip||'')+'</span></div></div>';
-  }).join('');
+  renderColorPicker();
+  renderPrinterCheckList();
   om('m-cat');
 }
-function selColor(id){
-  selectedColor=id;
+function renderColorPicker(){
   document.getElementById('c-colors').innerHTML=CAT_COLORS.map(function(c){
-    return '<div class="color-swatch '+(c.id===id?'sel':'')+'" style="background:'+c.bg+';border-color:'+(c.id===id?c.text:'transparent')+'" onclick="selColor(\''+c.id+'\')" title="'+c.id+'"></div>';
+    return '<div class="color-swatch '+(c.id===selectedColor?'sel':'')+'" style="background:'+c.bg+';border-color:'+(c.id===selectedColor?c.text:'transparent')+'" onclick="selColor(\''+c.id+'\')"></div>';
+  }).join('');
+}
+function selColor(id){selectedColor=id;renderColorPicker();}
+function renderPrinterCheckList(){
+  var el=document.getElementById('c-printers');
+  if(!state.printers.length){el.innerHTML='<div class="empty-table">Voeg eerst printers toe</div>';return;}
+  el.innerHTML=state.printers.map(function(p){
+    var on=selectedCatPrinters.indexOf(p.id)!==-1;
+    return '<div class="chk-row" onclick="togCatP(\''+esc(p.id)+'\')"><div class="chkbox '+(on?'on':'')+'" id="ccp-'+p.id+'">'+(on?'✓':'')+'</div><div><strong>'+p.name+'</strong>'+(p.ip?' <span style="color:var(--text-muted);font-size:12px">'+p.ip+'</span>':'')+(p.isBill?' <span class="badge" style="background:#f3e8ff;color:#6b21a8">Kassa</span>':'')+'</div></div>';
   }).join('');
 }
 function togCatP(pid){
@@ -628,29 +872,28 @@ function saveCat(){
   var name=document.getElementById('c-name').value.trim();if(!name){notify('Vul een naam in');return;}
   if(editCatId){var cat=state.categories.find(function(c){return c.id===editCatId;});if(cat){cat.name=name;cat.color=selectedColor;cat.printers=selectedCatPrinters.slice();}}
   else{state.categories.push({id:'cat'+state.nextCid++,name:name,color:selectedColor,printers:selectedCatPrinters.slice()});}
-  pushSettings();cm('m-cat');renderCatTable();notify('Categorie opgeslagen ✓');
+  pushSettings();cm('m-cat');renderCatTable();notify('Opgeslagen ✓');
 }
 function delCat(id){
   if(!confirm('Categorie verwijderen?')) return;
   state.categories=state.categories.filter(function(c){return c.id!==id;});
-  pushSettings();renderCatTable();renderMenuTable();notify('Categorie verwijderd');
+  pushSettings();renderCatTable();renderMenuTable();notify('Verwijderd');
 }
 
 // ── PRINTER MODAL ─────────────────────────────────────────
 function openPrinterModal(id){
   editPrinterId=id||null;
   var p=id?state.printers.find(function(x){return x.id===id;}):null;
-  document.getElementById('m-printer-title').textContent=id?'Printer bewerken':'Printer toevoegen';
+  document.getElementById('m-printer-title').textContent=id?'Printer bewerken':'Nieuwe printer';
   document.getElementById('p-name').value=p?p.name:'';
   document.getElementById('p-ip').value=p?p.ip||'':'';
   isBillPrinter=p?p.isBill:false;
-  updBillBtns(isBillPrinter);
+  document.getElementById('p-bill-toggle').className='toggle '+(isBillPrinter?'on':'');
   om('m-printer');
 }
-function setBill(v){isBillPrinter=v;updBillBtns(v);}
-function updBillBtns(v){
-  document.getElementById('p-bill-y').className='btn btn-sm '+(v?'btn-primary':'btn-secondary');
-  document.getElementById('p-bill-n').className='btn btn-sm '+(v?'btn-secondary':'btn-primary');
+function toggleBill(){
+  isBillPrinter=!isBillPrinter;
+  document.getElementById('p-bill-toggle').className='toggle '+(isBillPrinter?'on':'');
 }
 function savePrinter(){
   var name=document.getElementById('p-name').value.trim();var ip=document.getElementById('p-ip').value.trim();
@@ -658,31 +901,32 @@ function savePrinter(){
   if(isBillPrinter) state.printers.forEach(function(p){p.isBill=false;});
   if(editPrinterId){var p=state.printers.find(function(x){return x.id===editPrinterId;});if(p){p.name=name;p.ip=ip;p.isBill=isBillPrinter;}}
   else{state.printers.push({id:'p'+state.nextPid++,name:name,ip:ip,isBill:isBillPrinter});}
-  pushSettings();cm('m-printer');renderPrinterTable();notify('Printer opgeslagen ✓');
+  pushSettings();cm('m-printer');renderPrinterTable();notify('Opgeslagen ✓');
 }
 function delPrinter(id){
+  if(!confirm('Printer verwijderen?')) return;
   state.printers=state.printers.filter(function(p){return p.id!==id;});
   state.categories.forEach(function(c){c.printers=(c.printers||[]).filter(function(pid){return pid!==id;});});
-  pushSettings();renderPrinterTable();renderCatTable();notify('Printer verwijderd');
+  pushSettings();renderPrinterTable();renderCatTable();notify('Verwijderd');
 }
 
-// ── STAFF ─────────────────────────────────────────────────
+// ── STAFF MODAL ───────────────────────────────────────────
 function openStaffModal(){document.getElementById('s-name').value='';document.getElementById('s-pin').value='';om('m-staff');}
 function saveStaff(){
   var name=document.getElementById('s-name').value.trim();var pin=document.getElementById('s-pin').value.trim();
   if(!name||!pin){notify('Vul naam en PIN in');return;}
   if(state.staff.find(function(s){return s.pin===pin;})){notify('PIN al in gebruik');return;}
-  state.staff.push({name:name,pin:pin});pushSettings();cm('m-staff');renderStaffTable();notify('Medewerker toegevoegd ✓');
+  state.staff.push({name:name,pin:pin});pushSettings();cm('m-staff');renderStaffTable();notify('Toegevoegd ✓');
 }
-function delStaff(idx){state.staff.splice(idx,1);pushSettings();renderStaffTable();}
+function delStaff(idx){
+  if(!confirm('Medewerker verwijderen?')) return;
+  state.staff.splice(idx,1);pushSettings();renderStaffTable();
+}
 
 // ── INIT ──────────────────────────────────────────────────
-var savedUrl=localStorage.getItem('dashboard-fb-url');
-if(savedUrl){
-  state.fbUrl=savedUrl;
-  document.getElementById('fb-url').value=savedUrl;
-  startPolling();
-}
+var savedUrl=localStorage.getItem('admin-fb-url');
+if(savedUrl){state.fbUrl=savedUrl;document.getElementById('fb-url').value=savedUrl;startPolling();}
+setSyncStatus('offline');
 </script>
 </body>
 </html>
