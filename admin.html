@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Popup Restaurant — Admin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -178,6 +179,7 @@ tbody tr:hover td{background:#fafbfc}
     <nav class="nav">
       <div class="nav-item active" data-page="p-orders" onclick="showPage('p-orders',this)"><span class="nav-icon">📋</span>Bestellingen</div>
       <div class="nav-item" data-page="p-history" onclick="showPage('p-history',this)"><span class="nav-icon">🕐</span>Historiek</div>
+      <div class="nav-item" data-page="p-stats" onclick="showPage('p-stats',this)"><span class="nav-icon">📊</span>Statistieken</div>
       <div class="nav-item" data-page="p-menu" onclick="showPage('p-menu',this)"><span class="nav-icon">🍽️</span>Menu</div>
       <div class="nav-item" data-page="p-categories" onclick="showPage('p-categories',this)"><span class="nav-icon">🗂️</span>Categorieën</div>
       <div class="nav-item" data-page="p-printers" onclick="showPage('p-printers',this)"><span class="nav-icon">🖨️</span>Printers</div>
@@ -235,6 +237,41 @@ tbody tr:hover td{background:#fafbfc}
       </div>
     </section>
 
+    <!-- STATISTIEKEN -->
+    <section id="p-stats" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Statistieken</div>
+          <div class="page-subtitle">Real-time overzicht van wat er besteld werd</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <select class="inp" id="stats-scope" onchange="renderStats()" style="width:auto">
+            <option value="all">Alle bestellingen</option>
+            <option value="active">Alleen actieve</option>
+            <option value="paid">Alleen betaald</option>
+          </select>
+          <button class="btn btn-success" onclick="exportStatsXlsx()">📥 Export Excel</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Aantal bestellingen</div><div class="kpi-value" id="stats-orders">—</div></div>
+        <div class="kpi"><div class="kpi-label">Items verkocht</div><div class="kpi-value" id="stats-items">—</div></div>
+        <div class="kpi"><div class="kpi-label">Unieke gerechten</div><div class="kpi-value" id="stats-unique">—</div></div>
+        <div class="kpi"><div class="kpi-label">Totale waarde</div><div class="kpi-value green" id="stats-total">€—</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="card-title">Per categorie</span></div>
+        <div class="card-body dense"><div id="stats-cat-table"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Per item</span></div>
+        <div class="card-body dense"><div id="stats-item-table"></div></div>
+      </div>
+    </section>
+
     <!-- HISTORIEK -->
     <section id="p-history" class="page">
       <div class="page-header">
@@ -265,7 +302,12 @@ tbody tr:hover td{background:#fafbfc}
           <div class="page-title">Menu</div>
           <div class="page-subtitle">Beheer alle gerechten en dranken</div>
         </div>
-        <button class="btn btn-primary" onclick="openItemModal()">+ Nieuw item</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="exportMenuXlsx()">📥 Export</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('menu-import').click()">📤 Import</button>
+          <input type="file" id="menu-import" accept=".xlsx,.xls" style="display:none" onchange="importMenuXlsx(this)">
+          <button class="btn btn-primary" onclick="openItemModal()">+ Nieuw item</button>
+        </div>
       </div>
       <div class="card">
         <div class="card-body dense">
@@ -284,7 +326,12 @@ tbody tr:hover td{background:#fafbfc}
           <div class="page-title">Categorieën</div>
           <div class="page-subtitle">Groepeer items en koppel ze aan printers</div>
         </div>
-        <button class="btn btn-primary" onclick="openCatModal()">+ Nieuwe categorie</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="exportCatsXlsx()">📥 Export</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('cat-import').click()">📤 Import</button>
+          <input type="file" id="cat-import" accept=".xlsx,.xls" style="display:none" onchange="importCatsXlsx(this)">
+          <button class="btn btn-primary" onclick="openCatModal()">+ Nieuwe categorie</button>
+        </div>
       </div>
       <div class="card">
         <div class="card-body dense">
@@ -547,6 +594,7 @@ function renderAll(){
   renderCatTable();
   renderPrinterTable();
   renderStaffTable();
+  renderStats();
   if(selectedGroupKey) renderDetailPanel();
   var sa=document.getElementById('settings-active-count');
   if(sa) sa.textContent=state.orders.filter(function(o){return !o.paid;}).length;
@@ -921,6 +969,252 @@ function saveStaff(){
 function delStaff(idx){
   if(!confirm('Medewerker verwijderen?')) return;
   state.staff.splice(idx,1);pushSettings();renderStaffTable();
+}
+
+// ── STATISTIEKEN ──────────────────────────────────────────
+function getStatsData(){
+  var scope=document.getElementById('stats-scope');
+  var s=scope?scope.value:'all';
+  return state.orders.filter(function(o){
+    if(s==='active') return !o.paid;
+    if(s==='paid') return o.paid;
+    return true;
+  });
+}
+
+function renderStats(){
+  var orders=getStatsData();
+  var allItems=orders.reduce(function(a,o){return a.concat(o.items);},[]);
+  var totalQty=allItems.reduce(function(s,i){return s+i.qty;},0);
+  var totalVal=allItems.reduce(function(s,i){return s+i.price*i.qty;},0);
+
+  // unieke items (per item-id, ongeacht variatie)
+  var uniqueIds={};
+  allItems.forEach(function(i){uniqueIds[i.id]=true;});
+
+  var so=document.getElementById('stats-orders');if(so)so.textContent=orders.length;
+  var si=document.getElementById('stats-items');if(si)si.textContent=totalQty;
+  var su=document.getElementById('stats-unique');if(su)su.textContent=Object.keys(uniqueIds).length;
+  var st=document.getElementById('stats-total');if(st)st.textContent='€'+totalVal.toFixed(2);
+
+  // per categorie
+  var byCat={};
+  allItems.forEach(function(i){
+    if(!byCat[i.cat]) byCat[i.cat]={qty:0,total:0};
+    byCat[i.cat].qty+=i.qty;
+    byCat[i.cat].total+=i.price*i.qty;
+  });
+  var catEl=document.getElementById('stats-cat-table');
+  if(catEl){
+    if(!Object.keys(byCat).length){catEl.innerHTML='<div class="empty-table">Nog geen data</div>';}
+    else{
+      var html='<table><thead><tr><th>Categorie</th><th style="text-align:right">Aantal</th><th style="text-align:right">% v/h totaal</th><th style="text-align:right">Omzet</th></tr></thead><tbody>';
+      Object.keys(byCat).map(function(catId){
+        return {catId:catId,qty:byCat[catId].qty,total:byCat[catId].total};
+      }).sort(function(a,b){return b.qty-a.qty;}).forEach(function(row){
+        var pct=totalQty?((row.qty/totalQty)*100).toFixed(1):'0.0';
+        var col=catColorById(row.catId);
+        html+='<tr><td><span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(row.catId)+'</span></td>';
+        html+='<td style="text-align:right;font-weight:600">'+row.qty+'</td>';
+        html+='<td style="text-align:right">'+pct+'%</td>';
+        html+='<td style="text-align:right;font-weight:600">€'+row.total.toFixed(2)+'</td></tr>';
+      });
+      html+='</tbody></table>';
+      catEl.innerHTML=html;
+    }
+  }
+
+  // per item (samenvatting per item-id)
+  var byItem={};
+  allItems.forEach(function(i){
+    var k=i.id+'__'+(i.variation||'');
+    if(!byItem[k]) byItem[k]={name:i.name,variation:i.variation||null,cat:i.cat,price:i.price,qty:0,total:0};
+    byItem[k].qty+=i.qty;
+    byItem[k].total+=i.price*i.qty;
+  });
+  var itemEl=document.getElementById('stats-item-table');
+  if(itemEl){
+    var rows=Object.values(byItem).sort(function(a,b){return b.qty-a.qty;});
+    if(!rows.length){itemEl.innerHTML='<div class="empty-table">Nog geen data</div>';}
+    else{
+      var html='<table><thead><tr><th>Item</th><th>Categorie</th><th>Variatie</th><th style="text-align:right">Stuksprijs</th><th style="text-align:right">Aantal</th><th style="text-align:right">Omzet</th></tr></thead><tbody>';
+      rows.forEach(function(r){
+        var col=catColorById(r.cat);
+        html+='<tr><td><strong>'+r.name+'</strong></td>';
+        html+='<td><span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(r.cat)+'</span></td>';
+        html+='<td style="color:var(--text-muted)">'+(r.variation||'—')+'</td>';
+        html+='<td style="text-align:right">€'+r.price.toFixed(2)+'</td>';
+        html+='<td style="text-align:right;font-weight:600">'+r.qty+'</td>';
+        html+='<td style="text-align:right;font-weight:600">€'+r.total.toFixed(2)+'</td></tr>';
+      });
+      html+='</tbody></table>';
+      itemEl.innerHTML=html;
+    }
+  }
+}
+
+// ── EXPORT / IMPORT ───────────────────────────────────────
+function exportStatsXlsx(){
+  if(typeof XLSX==='undefined'){notify('Excel-library nog niet geladen');return;}
+  var orders=getStatsData();
+  var allItems=orders.reduce(function(a,o){return a.concat(o.items.map(function(i){return Object.assign({},i,{table:o.table,name_klant:o.name,waiter:o.waiter,ts:o.ts,paid:o.paid});}));},[]);
+
+  // Per item samenvatting
+  var byItem={};
+  allItems.forEach(function(i){
+    var k=i.id+'__'+(i.variation||'');
+    if(!byItem[k]) byItem[k]={Item:i.name,Categorie:catNameById(i.cat),Variatie:i.variation||'',Stuksprijs:i.price,Aantal:0,Omzet:0};
+    byItem[k].Aantal+=i.qty;
+    byItem[k].Omzet+=i.price*i.qty;
+  });
+  var perItem=Object.values(byItem).sort(function(a,b){return b.Aantal-a.Aantal;});
+
+  // Per categorie
+  var byCat={};
+  allItems.forEach(function(i){
+    var k=catNameById(i.cat);
+    if(!byCat[k]) byCat[k]={Categorie:k,Aantal:0,Omzet:0};
+    byCat[k].Aantal+=i.qty;
+    byCat[k].Omzet+=i.price*i.qty;
+  });
+  var perCat=Object.values(byCat).sort(function(a,b){return b.Aantal-a.Aantal;});
+
+  // Alle bestellingen detail
+  var allRows=allItems.map(function(i){
+    return {
+      Tafel:i.table,
+      Klant:i.name_klant,
+      Opnemer:i.waiter||'',
+      Tijdstip:new Date(i.ts).toLocaleString('nl-BE'),
+      Item:i.name,
+      Categorie:catNameById(i.cat),
+      Variatie:i.variation||'',
+      Commentaar:i.comment||'',
+      Aantal:i.qty,
+      Stuksprijs:i.price,
+      Subtotaal:i.price*i.qty,
+      Geserveerd:i.served?'Ja':'Nee',
+      Betaald:i.paid?'Ja':'Nee'
+    };
+  });
+
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perItem), 'Per item');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perCat), 'Per categorie');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allRows), 'Alle bestellingen');
+
+  var date=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, 'statistieken-'+date+'.xlsx');
+  notify('Excel gedownload ✓');
+}
+
+function exportMenuXlsx(){
+  if(typeof XLSX==='undefined'){notify('Excel-library nog niet geladen');return;}
+  var rows=state.menu.map(function(i){
+    return {
+      Naam:i.name,
+      Prijs:i.price,
+      Categorie:catNameById(i.cat),
+      Variaties:(i.vars||[]).join(', ')
+    };
+  });
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Menu');
+  XLSX.writeFile(wb, 'menu.xlsx');
+  notify('Menu geëxporteerd ✓');
+}
+
+function importMenuXlsx(input){
+  var file=input.files[0];if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var sheet=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(sheet);
+      if(!rows.length){notify('Geen data gevonden');return;}
+      if(!confirm('Bestaande menu items vervangen door '+rows.length+' rijen uit het bestand?')) return;
+      var newMenu=[];
+      var nextId=Math.max.apply(null,[state.nextMid].concat(state.menu.map(function(m){return m.id;})))+1;
+      rows.forEach(function(r){
+        var name=String(r.Naam||r.Name||'').trim();
+        if(!name) return;
+        var price=parseFloat(r.Prijs||r.Price||0);
+        if(isNaN(price)) price=0;
+        var catName=String(r.Categorie||r.Category||'').trim();
+        var cat=state.categories.find(function(c){return c.name===catName;});
+        if(!cat){
+          // maak nieuwe categorie aan
+          var newCat={id:'cat'+state.nextCid++,name:catName||'Overige',color:'gray',printers:[]};
+          state.categories.push(newCat);
+          cat=newCat;
+        }
+        var varStr=String(r.Variaties||r.Variations||'').trim();
+        var vars=varStr?varStr.split(',').map(function(v){return v.trim();}).filter(Boolean):[];
+        newMenu.push({id:nextId++,name:name,price:price,cat:cat.id,vars:vars});
+      });
+      state.menu=newMenu;
+      state.nextMid=nextId;
+      pushSettings();renderMenuTable();renderCatTable();
+      notify('Geïmporteerd: '+newMenu.length+' items ✓');
+    }catch(err){
+      console.error(err);notify('Fout bij importeren: '+err.message);
+    }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function exportCatsXlsx(){
+  if(typeof XLSX==='undefined'){notify('Excel-library nog niet geladen');return;}
+  var rows=state.categories.map(function(c){
+    var printerNames=(c.printers||[]).map(function(pid){var p=state.printers.find(function(x){return x.id===pid;});return p?p.name:'';}).filter(Boolean).join(', ');
+    return {
+      Naam:c.name,
+      Kleur:c.color,
+      Printers:printerNames
+    };
+  });
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Categorieën');
+  XLSX.writeFile(wb, 'categorieen.xlsx');
+  notify('Categorieën geëxporteerd ✓');
+}
+
+function importCatsXlsx(input){
+  var file=input.files[0];if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var sheet=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(sheet);
+      if(!rows.length){notify('Geen data gevonden');return;}
+      if(!confirm('Bestaande categorieën vervangen door '+rows.length+' rijen uit het bestand?')) return;
+      var validColors=CAT_COLORS.map(function(c){return c.id;});
+      var newCats=[];
+      var nextId=Math.max.apply(null,[state.nextCid].concat(state.categories.map(function(c){
+        var m=String(c.id).match(/cat(\d+)/);return m?parseInt(m[1]):0;
+      })))+1;
+      rows.forEach(function(r){
+        var name=String(r.Naam||r.Name||'').trim();
+        if(!name) return;
+        var color=String(r.Kleur||r.Color||'gray').trim();
+        if(validColors.indexOf(color)===-1) color='gray';
+        var printerNames=String(r.Printers||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+        var printerIds=printerNames.map(function(n){var p=state.printers.find(function(x){return x.name===n;});return p?p.id:null;}).filter(Boolean);
+        newCats.push({id:'cat'+nextId++,name:name,color:color,printers:printerIds});
+      });
+      state.categories=newCats;
+      state.nextCid=nextId;
+      pushSettings();renderCatTable();renderMenuTable();
+      notify('Geïmporteerd: '+newCats.length+' categorieën ✓');
+    }catch(err){
+      console.error(err);notify('Fout bij importeren: '+err.message);
+    }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ── INIT ──────────────────────────────────────────────────
