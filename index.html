@@ -64,7 +64,9 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
 .pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
 .pin-btn{padding:18px;font-size:22px;font-weight:600;border:1px solid #e5e5e5;border-radius:12px;background:#fff;cursor:pointer}
 .pin-btn:active{background:#f0f0f0}
-.pin-display{background:#f5f5f5;border-radius:10px;padding:16px;text-align:center;font-size:28px;letter-spacing:8px;min-height:62px;margin-bottom:8px;color:#1a1a1a;border:1px solid #e5e5e5}
+.pin-display{background:#f5f5f5 !important;border-radius:10px;padding:18px;text-align:center;min-height:64px;margin-bottom:8px;border:2px solid #2563eb;display:flex;align-items:center;justify-content:center;gap:12px}
+.pin-dot{width:16px;height:16px;border-radius:50%;background:#cbd5e1;transition:background .15s}
+.pin-dot.filled{background:#2563eb}
 .total-row{display:flex;justify-content:space-between;padding:6px 0}
 .total-row.grand{font-size:17px;font-weight:700;border-top:1px solid #e5e5e5;margin-top:6px;padding-top:10px}
 .notif{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
@@ -108,7 +110,14 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
     <label>Uw naam</label>
     <input type="text" class="inp" id="login-name" placeholder="bv. Sarah">
     <label>PIN-code</label>
-    <div class="pin-display" id="pin-display">&#8203;</div>
+    <div class="pin-display" id="pin-display">
+      <div class="pin-dot" id="pd-0"></div>
+      <div class="pin-dot" id="pd-1"></div>
+      <div class="pin-dot" id="pd-2"></div>
+      <div class="pin-dot" id="pd-3"></div>
+      <div class="pin-dot" id="pd-4"></div>
+      <div class="pin-dot" id="pd-5"></div>
+    </div>
     <div style="font-size:12px;color:#dc2626;text-align:center;min-height:18px;margin-bottom:6px" id="pin-err"></div>
     <div class="pin-grid">
       <button class="pin-btn" onclick="pp('1')">1</button>
@@ -593,7 +602,14 @@ function pp(d){
 }
 function pd(){currentPin=currentPin.slice(0,-1);updPin();document.getElementById('pin-err').textContent='';}
 function pc(){currentPin='';updPin();document.getElementById('pin-err').textContent='';}
-function updPin(){document.getElementById('pin-display').textContent='●'.repeat(currentPin.length)||'\u200b';}
+function updPin(){
+  for(var i=0;i<6;i++){
+    var dot=document.getElementById('pd-'+i);
+    if(!dot) continue;
+    if(i<currentPin.length) dot.classList.add('filled');
+    else dot.classList.remove('filled');
+  }
+}
 function logout(){
   currentPin='';currentWaiter='';currentRole=null;updPin();
   document.getElementById('pin-err').textContent='';
