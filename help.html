@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Popup Restaurant — Handleiding</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#0f172a;line-height:1.6;font-size:15px}
+
+.topbar{background:#1e293b;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:20px;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+.topbar h1{font-size:18px;font-weight:700;flex-shrink:0}
+.tabs{display:flex;gap:6px;flex:1;overflow-x:auto}
+.tab{padding:8px 16px;border-radius:8px;cursor:pointer;color:#cbd5e1;font-weight:600;font-size:14px;white-space:nowrap;transition:all .12s}
+.tab:hover{background:#334155;color:#fff}
+.tab.active{background:#2563eb;color:#fff}
+
+.layout{max-width:1100px;margin:0 auto;padding:32px 24px;display:grid;grid-template-columns:240px 1fr;gap:32px}
+.toc{position:sticky;top:80px;align-self:start;font-size:14px;border-left:2px solid #e2e8f0;padding-left:16px}
+.toc-title{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;font-weight:700;margin-bottom:10px}
+.toc a{display:block;color:#475569;text-decoration:none;padding:5px 0;transition:color .1s}
+.toc a:hover{color:#2563eb}
+.toc a.h3{padding-left:14px;font-size:13px;color:#64748b}
+
+.content{min-width:0}
+.page{display:none}
+.page.active{display:block}
+
+h1{font-size:32px;font-weight:800;margin-bottom:6px;color:#0f172a}
+.subtitle{color:#64748b;font-size:16px;margin-bottom:36px}
+
+h2{font-size:22px;font-weight:700;margin:36px 0 14px;color:#0f172a;scroll-margin-top:80px}
+h2:first-of-type{margin-top:8px}
+h3{font-size:17px;font-weight:700;margin:24px 0 8px;color:#1e293b;scroll-margin-top:80px}
+
+p{margin-bottom:14px;color:#334155}
+ul,ol{margin:12px 0 18px 24px;color:#334155}
+li{margin-bottom:8px}
+li ul,li ol{margin:8px 0 8px 0}
+
+code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:13px;color:#0f172a}
+pre{background:#0f172a;color:#e2e8f0;padding:14px 18px;border-radius:10px;overflow-x:auto;margin:14px 0;font-size:13px;line-height:1.5}
+pre code{background:none;padding:0;color:inherit}
+
+.callout{padding:14px 18px;border-radius:10px;margin:18px 0;display:flex;gap:12px;align-items:flex-start}
+.callout-info{background:#eff6ff;border:1px solid #bfdbfe}
+.callout-warn{background:#fffbeb;border:1px solid #fde68a}
+.callout-success{background:#f0fdf4;border:1px solid #bbf7d0}
+.callout-icon{font-size:20px;flex-shrink:0}
+.callout p{margin:0;color:#1e3a8a}
+.callout-warn p{color:#854d0e}
+.callout-success p{color:#14532d}
+
+.step{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;margin:14px 0;display:flex;gap:16px;align-items:flex-start}
+.step-num{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.step-content{flex:1;min-width:0}
+.step-content h4{font-size:16px;font-weight:700;margin-bottom:4px;color:#0f172a}
+.step-content p{margin-bottom:0}
+.step-content ul,.step-content ol{margin-bottom:0}
+
+.feature{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin:14px 0}
+.feature-title{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:17px;font-weight:700;color:#0f172a}
+.feature-icon{font-size:22px}
+
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e2e8f0}
+th{background:#f8fafc;padding:10px 14px;text-align:left;font-weight:600;color:#475569;font-size:12px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #e2e8f0}
+td{padding:11px 14px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:top}
+tr:last-child td{border-bottom:none}
+
+.role-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;margin-bottom:12px}
+.role-title{font-weight:700;font-size:15px;margin-bottom:6px;color:#0f172a;display:flex;align-items:center;gap:8px}
+.role-pin{display:inline-block;background:#dbeafe;color:#1d4ed8;font-family:monospace;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:700}
+
+.url-card{background:#0f172a;color:#e2e8f0;padding:14px 18px;border-radius:10px;font-family:monospace;font-size:14px;margin:10px 0;word-break:break-all}
+
+@media (max-width:760px){
+  .layout{grid-template-columns:1fr;padding:20px 16px}
+  .toc{display:none}
+  h1{font-size:26px}
+  h2{font-size:20px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📘 Popup Restaurant</h1>
+  <div class="tabs">
+    <div class="tab active" onclick="showPage('p-getstarted',this)">Aan de slag</div>
+    <div class="tab" onclick="showPage('p-features',this)">Functionaliteiten</div>
+  </div>
+</div>
+
+<!-- AAN DE SLAG -->
+<div id="p-getstarted" class="page active">
+  <div class="layout">
+    <aside class="toc">
+      <div class="toc-title">Op deze pagina</div>
+      <a href="#g-intro">Wat is dit?</a>
+      <a href="#g-firebase">1. Firebase opzetten</a>
+      <a href="#g-deploy">2. App online zetten</a>
+      <a href="#g-config">3. Eerste configuratie</a>
+      <a href="#g-install">4. Installeren op telefoon</a>
+      <a href="#g-roles">Rollen en URLs</a>
+      <a href="#g-test">Testen vóór een event</a>
+      <a href="#g-troubleshoot">Problemen oplossen</a>
+    </aside>
+
+    <div class="content">
+      <h1>Aan de slag</h1>
+      <div class="subtitle">Volledige handleiding voor het opzetten en testen van de bestelapp</div>
+
+      <h2 id="g-intro">Wat is dit?</h2>
+      <p>De Popup Restaurant Bestelapp is een gratis, web-gebaseerde oplossing voor charity popup-events. Het bestaat uit drie onderdelen:</p>
+      <ul>
+        <li><strong>Bediening-app</strong> — werkt op elke smartphone, via de browser of als geïnstalleerde PWA</li>
+        <li><strong>Admin dashboard</strong> — voor laptop of desktop, voor beheer en live overzicht</li>
+        <li><strong>Keuken/bar display</strong> — voor een tablet in de keuken of aan de bar</li>
+      </ul>
+      <p>Alle toestellen synchroniseren via een gratis Firebase database. Tickets kunnen automatisch afgedrukt worden via een Node.js printserver op een laptop.</p>
+
+      <h2 id="g-firebase">1. Firebase opzetten</h2>
+      <p>Firebase is de gratis Google-database die alle toestellen verbindt. Eénmalig opzetten:</p>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Account aanmaken</h4>
+          <p>Ga naar <code>console.firebase.google.com</code> en log in met een Google-account.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Project aanmaken</h4>
+          <p>Klik <em>"Add project"</em>, kies een naam (bv. <code>popup-restaurant</code>), Google Analytics is optioneel (kan uit).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Realtime Database aanmaken</h4>
+          <p>In het linkermenu: <em>Build → Realtime Database → Create database</em>. Kies een regio (Europe) en kies <strong>Test mode</strong>. Je krijgt nu een URL te zien zoals:</p>
+          <div class="url-card">https://jouw-project-default-rtdb.europe-west1.firebasedatabase.app</div>
+          <p>Kopieer deze URL — die heb je in stap 3 nodig.</p>
+        </div>
+      </div>
+
+      <div class="callout callout-warn">
+        <div class="callout-icon">⚠️</div>
+        <p><strong>Test mode:</strong> deze stelling is 30 dagen actief. Voor productie pas je later de regels aan, voor tests is dit prima.</p>
+      </div>
+
+      <h2 id="g-deploy">2. App online zetten</h2>
+      <p>De app wordt gehost op GitHub Pages — gratis en eenvoudig.</p>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>GitHub repository aanmaken</h4>
+          <p>Maak een gratis account op <code>github.com</code>, klik <em>New repository</em> en geef het een naam (bv. <code>bestellapp</code>).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Bestanden uploaden</h4>
+          <p>Voeg deze bestanden toe aan de root van de repository:</p>
+          <ul>
+            <li><code>index.html</code> — de bediening-app</li>
+            <li><code>admin.html</code> — het admin dashboard</li>
+            <li><code>station.html</code> — keuken/bar display</li>
+            <li><code>help.html</code> — deze handleiding</li>
+            <li><code>manifest.json</code> + <code>sw.js</code> — voor PWA-installatie</li>
+            <li><code>icon-192.png</code> + <code>icon-512.png</code> — app-icoontjes</li>
+          </ul>
+          <p>De makkelijkste manier: open de repo op GitHub en typ <code>.</code> (een punt). Dan opent een volledige editor waar je alle bestanden tegelijk kan toevoegen.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>GitHub Pages activeren</h4>
+          <p>Ga naar <em>Settings → Pages → Source</em>. Kies <strong>Deploy from a branch</strong> → branch <strong>main</strong> → folder <strong>/ (root)</strong> → Save.</p>
+          <p>Na ongeveer 1 minuut is de app beschikbaar op:</p>
+          <div class="url-card">https://jouwgebruikersnaam.github.io/bestellapp/</div>
+        </div>
+      </div>
+
+      <h2 id="g-config">3. Eerste configuratie</h2>
+      <p>Open de app eenmalig op een toestel om alles in te stellen. Daarna nemen alle andere toestellen de configuratie automatisch over.</p>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Open het admin dashboard</h4>
+          <p>Ga naar <code>https://jouwgebruikersnaam.github.io/bestellapp/admin.html</code> in een desktop browser.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Firebase URL instellen</h4>
+          <p>Ga naar het tabblad <em>Instellingen</em>, plak je Firebase URL en klik <em>Opslaan en verbinden</em>. Het rondje rechtsonder zou groen moeten worden.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Configuratie invullen</h4>
+          <p>Vul de basisinstellingen in (deze synchroniseren automatisch met alle andere toestellen):</p>
+          <ul>
+            <li><strong>Printers</strong> — naam + IP-adres per ticket-printer (later aanpasbaar)</li>
+            <li><strong>Categorieën</strong> — bv. Bar, Keuken, Koude keuken — koppel elk aan één of meer printers</li>
+            <li><strong>Menu items</strong> — alle gerechten en dranken met prijs en categorie</li>
+            <li><strong>Tafels</strong> — beschikbare tafelnummers</li>
+            <li><strong>Medewerkers</strong> — naam + PIN-code per persoon</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout callout-info">
+        <div class="callout-icon">💡</div>
+        <p><strong>Tip:</strong> je kunt het menu en categorieën ook importeren vanuit Excel. Dit is handig om al je items vooraf in een spreadsheet voor te bereiden.</p>
+      </div>
+
+      <h2 id="g-install">4. Installeren op telefoon</h2>
+      <p>De bediening-app werkt direct in een browser, maar als PWA voelt het als een echte app aan.</p>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Open de app</h4>
+          <p>Ga naar <code>https://jouwgebruikersnaam.github.io/bestellapp/</code> in Safari (iPhone) of Chrome (Android).</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Eerste keer: log in als admin</h4>
+          <p>Vul je naam in, type PIN <code>9999</code>, ga naar <em>Firebase synchronisatie</em> en plak de URL. Klik <em>Opslaan en verbinden</em>. Daarna verschijnen alle gedeelde instellingen automatisch.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Toevoegen aan startscherm</h4>
+          <ul>
+            <li><strong>iPhone:</strong> deel-icoontje (vierkantje met pijl) → "Zet op beginscherm"</li>
+            <li><strong>Android:</strong> drie puntjes rechtsboven → "App installeren"</li>
+          </ul>
+        </div>
+      </div>
+
+      <h2 id="g-roles">Rollen en URLs</h2>
+      <p>Verschillende toestellen hebben verschillende rollen. Hieronder een overzicht:</p>
+
+      <div class="role-card">
+        <div class="role-title">📱 Bediening (smartphone)</div>
+        <p>Voor wie bestellingen opneemt aan tafel.</p>
+        <p><strong>URL:</strong> <code>/index.html</code> — <strong>PIN:</strong> <span class="role-pin">1234</span> (default)</p>
+      </div>
+
+      <div class="role-card">
+        <div class="role-title">💻 Admin (laptop)</div>
+        <p>Voor de beheerder: live overzicht, betalingen, statistieken, instellingen.</p>
+        <p><strong>URL:</strong> <code>/admin.html</code></p>
+      </div>
+
+      <div class="role-card">
+        <div class="role-title">📲 Keuken/Bar display (tablet)</div>
+        <p>Toont openstaande bonnen voor een specifiek station, items afvinken als geserveerd.</p>
+        <p><strong>URL:</strong> <code>/station.html</code></p>
+      </div>
+
+      <h2 id="g-test">Testen vóór een event</h2>
+      <p>Doe minimaal één keer een testrun met meerdere toestellen om alles te valideren:</p>
+      <ol>
+        <li>Open de app op 2-3 telefoons en log in met verschillende namen</li>
+        <li>Plaats elk een paar bestellingen op verschillende tafels</li>
+        <li>Check of de bestellingen op het admin dashboard verschijnen binnen 5 seconden</li>
+        <li>Test op de tablet of de juiste categorieën verschijnen</li>
+        <li>Vink items af op het station-display, check of ze in admin als "geserveerd" verschijnen</li>
+        <li>Markeer een bestelling als betaald en exporteer naar Excel</li>
+        <li>Test (indien beschikbaar) ook de printserver met echte printers</li>
+      </ol>
+
+      <h2 id="g-troubleshoot">Problemen oplossen</h2>
+
+      <h3>Toestel toont geen bestellingen</h3>
+      <ul>
+        <li>Check of de Firebase URL correct ingegeven is in het Admin/Instellingen tabblad</li>
+        <li>Plak de URL met <code>/test.json</code> erachter in een browser — als <code>null</code> verschijnt, is de URL juist</li>
+        <li>Check de syncstatus rechts: groen rondje = OK, rood = fout, grijs = niet verbonden</li>
+      </ul>
+
+      <h3>Bestellingen worden niet opgeslagen</h3>
+      <ul>
+        <li>Open F12 → Console en kijk of er fouten staan</li>
+        <li>Check of <code>state.fbUrl</code> niet leeg is — typ dat in de console</li>
+        <li>Controleer dat Firebase nog in Test mode staat (regels niet vervallen)</li>
+      </ul>
+
+      <h3>App werkt offline niet</h3>
+      <p>De app moet eerst online geladen zijn om de service worker te installeren. Bij het volgende bezoek werkt offline-fallback. Bestellingen kunnen offline niet gesynchroniseerd worden — bediening heeft altijd internet nodig.</p>
+
+      <h3>PIN werkt niet</h3>
+      <p>Check in het admin dashboard of de medewerker (en zijn PIN) in de lijst staat. Default PINs zijn <code>1234</code> (bediening) en <code>9999</code> (admin) — wijzig deze niet zonder een nieuwe admin-PIN aan te maken.</p>
+    </div>
+  </div>
+</div>
+
+<!-- FUNCTIONALITEITEN -->
+<div id="p-features" class="page">
+  <div class="layout">
+    <aside class="toc">
+      <div class="toc-title">Op deze pagina</div>
+      <a href="#f-mobile">Bediening-app</a>
+      <a href="#f-mobile-order" class="h3">Bestellingen opnemen</a>
+      <a href="#f-mobile-orders" class="h3">Lopende bestellingen</a>
+      <a href="#f-mobile-history" class="h3">Historiek</a>
+      <a href="#f-admin">Admin dashboard</a>
+      <a href="#f-admin-orders" class="h3">Bestellingen</a>
+      <a href="#f-admin-stats" class="h3">Statistieken</a>
+      <a href="#f-admin-history" class="h3">Historiek</a>
+      <a href="#f-admin-config" class="h3">Configuratie</a>
+      <a href="#f-station">Keuken/bar display</a>
+      <a href="#f-printer">Printserver</a>
+      <a href="#f-sync">Synchronisatie</a>
+    </aside>
+
+    <div class="content">
+      <h1>Functionaliteiten</h1>
+      <div class="subtitle">Volledig overzicht van wat de app kan</div>
+
+      <h2 id="f-mobile">📱 Bediening-app</h2>
+      <p>De mobiele app is geoptimaliseerd voor smartphones en gebruikt door bediening om bestellingen op te nemen aan tafel.</p>
+
+      <h3 id="f-mobile-order">Bestellingen opnemen</h3>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">🔢</span>Tafel + naam combinatie</div>
+        <p>Elke bestelling is gekoppeld aan een tafelnummer (uit dropdown) en een klantnaam. Hierdoor kunnen meerdere groepen aan dezelfde tafel zitten.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">🍽️</span>Items met variaties</div>
+        <p>Items kunnen variaties hebben (bv. <em>Saignant / À point / Bien cuit</em> voor steak). De juiste variatie wordt op het keukenticket afgedrukt.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">💬</span>Commentaar per item</div>
+        <p>Bij elke orderlijn kan een vrije commentaar toegevoegd worden (bv. "zonder ui", "allergie noten"). Klik op de tekstballon naast de prijs om het te bewerken.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">🔀</span>Splitsen / aanvullen</div>
+        <p>Iemand voegt zich bij een bestaande tafel? Tik op "Splitsen" en voeg de nieuwe naam toe. Items aan een bestaande bestelling toevoegen kan ook via "Toevoegen".</p>
+      </div>
+
+      <h3 id="f-mobile-orders">Lopende bestellingen</h3>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">📋</span>Overzicht actieve tafels</div>
+        <p>Alle openstaande tafels in één lijst, met live syncstatus. Per tafel zie je naam, totaalbedrag, aantal opnemers en status (open / gedeeltelijk geserveerd / volledig geserveerd).</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">✓</span>Items markeren als geserveerd</div>
+        <p>Bij het detail van een bestelling kan je items individueel afvinken. Handig voor wie geen aparte tablet in de keuken heeft.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">💶</span>Rekening genereren</div>
+        <p>De rekening wordt automatisch samengesteld met alle items van alle rondes. Verstuurbaar naar de kassaprinter en/of via de browser afdrukbaar.</p>
+      </div>
+
+      <h3 id="f-mobile-history">Historiek</h3>
+      <p>Apart tabblad met alle afgeronde bestellingen. Toont totale omzet van het event, aantal tafels, en details per bestelling. Rekeningen kunnen herafgedrukt worden.</p>
+
+      <h2 id="f-admin">💻 Admin dashboard</h2>
+      <p>Het dashboard is geoptimaliseerd voor laptops en grote schermen, met meer overzicht en uitgebreide beheerfuncties.</p>
+
+      <h3 id="f-admin-orders">Bestellingen-tab</h3>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">📊</span>Live KPI's</div>
+        <p>Bovenaan altijd zichtbaar: open tafels, items in wachtrij, items geserveerd, totale omzet — realtime ververst.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">↔️</span>Split-view interface</div>
+        <p>Links de lijst met actieve tafels (met filtertabs voor open/geserveerd/alle), rechts het detailpaneel met alle items. Items individueel afvinken werkt door direct op de checkbox te tikken.</p>
+      </div>
+
+      <h3 id="f-admin-stats">Statistieken-tab</h3>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">⏰</span>Activiteit per uur</div>
+        <p>Staafdiagram per uur met aantal verkochte items en omzet. Toont in één oogopslag de drukke momenten.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">🥇</span>Top items en categorieën</div>
+        <p>Twee tabellen: per item (gesorteerd op aantal verkocht) en per categorie (met percentage van het totaal). Ideaal om na het event te zien wat populair was.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">📥</span>Excel export</div>
+        <p>Eén klik genereert een werkboek met 6 sheets: <em>Per item, Per categorie, Per uur, Uur × Categorie, Per tafel, Alle bestellingen</em>. Volledig detail met datum, tijd, weekdag, opnemer, commentaren.</p>
+      </div>
+
+      <h3 id="f-admin-history">Historiek-tab</h3>
+      <p>Alle betaalde bestellingen met klap-uit-detail. Per tafel zie je tijdstip van openen en betalen, en de duur. Mogelijk om bestellingen <strong>terug te zetten</strong> naar status "Open" of "Geserveerd" als er per ongeluk gemarkeerd werd.</p>
+
+      <h3 id="f-admin-config">Configuratie-tabs</h3>
+      <table>
+        <tr><th>Tab</th><th>Functionaliteit</th></tr>
+        <tr><td><strong>Menu</strong></td><td>CRUD op alle items, met variaties. Excel import/export.</td></tr>
+        <tr><td><strong>Categorieën</strong></td><td>Naam, kleur, en koppeling aan één of meerdere printers.</td></tr>
+        <tr><td><strong>Printers</strong></td><td>Naam, IP-adres, type (ticket of kassa).</td></tr>
+        <tr><td><strong>Tafels</strong></td><td>Beschikbare tafelnummers (kunnen ook tekst zijn). Volgorde aanpasbaar. Excel import/export.</td></tr>
+        <tr><td><strong>Medewerkers</strong></td><td>Naam + PIN-code per persoon.</td></tr>
+        <tr><td><strong>Instellingen</strong></td><td>Firebase URL, syncstatus.</td></tr>
+      </table>
+
+      <h2 id="f-station">📲 Keuken/bar display</h2>
+      <p>Speciale weergave voor een tablet in de keuken of aan de bar. Toont alleen bonnen relevant voor dat station.</p>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">🎯</span>Categorie-filter</div>
+        <p>Bij eerste opstart kies je welke categorieën dit station bedient (bv. enkel "Keuken" of "Bar + Koude keuken"). Bovenaan tabs om te wisselen tussen categorieën met live aantal openstaande items.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">⏱️</span>Tijd verstreken per bon</div>
+        <p>Per bon zichtbaar hoe lang die in de wachtrij staat. Kleurcode: wit (recent), oranje (>8 min), rood (>15 min) — visueel signaal om prioriteit te geven.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">✓</span>Per item of volledige bon</div>
+        <p>Items kunnen één voor één afgevinkt worden door op de checkbox te tikken, of in één keer met de knop "Bon volledig klaar".</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">⏳</span>Fade-out na 30 seconden</div>
+        <p>Wanneer alle items van een bon klaar zijn, blijft de bon nog 30 seconden zichtbaar in groen. Tijdens die tijd kan je nog op "Ongedaan" klikken als je per ongeluk afvinkte.</p>
+      </div>
+
+      <h2 id="f-printer">🖨️ Printserver</h2>
+      <p>Optionele Node.js script dat draait op een laptop en automatisch tickets afdrukt op netwerk-printers.</p>
+      <ul>
+        <li>Polt elke 2 seconden Firebase voor nieuwe bestellingen</li>
+        <li>Groepeert items per printer op basis van categorie-mapping</li>
+        <li>Stuurt ESC/POS commando's via TCP — werkt met de meeste thermische printers (Epson, Star, Xprinter)</li>
+        <li>Print waiter-naam, tafel, items, variaties en commentaren</li>
+        <li>Configureerbaar: Firebase URL en poll-interval</li>
+      </ul>
+
+      <h2 id="f-sync">🔄 Synchronisatie</h2>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">⚡</span>Realtime tussen toestellen</div>
+        <p>Alle bestellingen, instellingen, menu, categorieën, printers, medewerkers en tafels worden gedeeld via Firebase. Polling elke 3-5 seconden. Wijzigingen op één toestel zijn binnen enkele seconden zichtbaar op alle andere.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">💾</span>Lokale fallback</div>
+        <p>Elk toestel houdt ook een lokale kopie van alle data in <code>localStorage</code>. Bij tijdelijke verbindingsproblemen blijft de app werken.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-title"><span class="feature-icon">🔒</span>Veiligheidscheck</div>
+        <p>Toestellen pushen pas configuratie naar Firebase nadat ze minstens één keer succesvol gesynchroniseerd hebben. Dit voorkomt dat een nieuw toestel met lege defaults bestaande config zou overschrijven.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPage(id, btn){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// Smooth scroll voor TOC links
+document.addEventListener('click', function(e){
+  if(e.target.tagName==='A' && e.target.getAttribute('href')&& e.target.getAttribute('href').startsWith('#')){
+    e.preventDefault();
+    var target=document.querySelector(e.target.getAttribute('href'));
+    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+});
+</script>
+</body>
+</html>
