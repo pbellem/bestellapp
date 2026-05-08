@@ -183,6 +183,7 @@ tbody tr:hover td{background:#fafbfc}
       <div class="nav-item" data-page="p-menu" onclick="showPage('p-menu',this)"><span class="nav-icon">🍽️</span>Menu</div>
       <div class="nav-item" data-page="p-categories" onclick="showPage('p-categories',this)"><span class="nav-icon">🗂️</span>Categorieën</div>
       <div class="nav-item" data-page="p-printers" onclick="showPage('p-printers',this)"><span class="nav-icon">🖨️</span>Printers</div>
+      <div class="nav-item" data-page="p-tables" onclick="showPage('p-tables',this)"><span class="nav-icon">🪑</span>Tafels</div>
       <div class="nav-item" data-page="p-staff" onclick="showPage('p-staff',this)"><span class="nav-icon">👥</span>Medewerkers</div>
       <div class="nav-item" data-page="p-settings" onclick="showPage('p-settings',this)"><span class="nav-icon">⚙️</span>Instellingen</div>
     </nav>
@@ -259,6 +260,11 @@ tbody tr:hover td{background:#fafbfc}
         <div class="kpi"><div class="kpi-label">Items verkocht</div><div class="kpi-value" id="stats-items">—</div></div>
         <div class="kpi"><div class="kpi-label">Unieke gerechten</div><div class="kpi-value" id="stats-unique">—</div></div>
         <div class="kpi"><div class="kpi-label">Totale waarde</div><div class="kpi-value green" id="stats-total">€—</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="card-title">Activiteit per uur</span><span style="font-size:12px;color:var(--text-muted)">Op basis van moment van bestelling</span></div>
+        <div class="card-body"><div id="stats-hourly"></div></div>
       </div>
 
       <div class="card" style="margin-bottom:16px">
@@ -339,6 +345,37 @@ tbody tr:hover td{background:#fafbfc}
             <thead><tr><th>Naam</th><th>Aantal items</th><th>Printers</th><th class="col-actions">Acties</th></tr></thead>
             <tbody id="cat-table"></tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAFELS -->
+    <section id="p-tables" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Tafels</div>
+          <div class="page-subtitle">Beheer beschikbare tafelnummers</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="exportTablesXlsx()">📥 Export</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('tab-import').click()">📤 Import</button>
+          <input type="file" id="tab-import" accept=".xlsx,.xls" style="display:none" onchange="importTablesXlsx(this)">
+          <button class="btn btn-primary" onclick="openTableModal()">+ Tafel toevoegen</button>
+        </div>
+      </div>
+      <div class="split">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Beschikbare tafels</span><span style="font-size:12px;color:var(--text-muted)" id="tables-count"></span></div>
+          <div class="card-body dense"><div id="tables-list"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Bulk bewerken</span></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Komma-gescheiden lijst van tafelnummers (bv. <code>1, 2, 3, A1, A2, terras-1</code>)</p>
+            <textarea class="inp" id="tables-bulk" rows="6" style="font-family:monospace;resize:vertical"></textarea>
+            <button class="btn btn-primary" onclick="saveBulkTables()">Opslaan</button>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:14px;line-height:1.5">Tafelnummers kunnen ook tekst zijn (bv. <em>Bar 1</em>, <em>Terras A</em>). Bediening kiest deze nummers in een dropdown bij nieuwe bestellingen.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -472,6 +509,18 @@ tbody tr:hover td{background:#fafbfc}
   </div>
 </div>
 
+<!-- MODAL: TAFEL -->
+<div class="modal-bg" id="m-table">
+  <div class="modal">
+    <div class="modal-header">Tafel toevoegen</div>
+    <div class="field"><label>Tafelnummer of -naam</label><input type="text" class="inp" id="t-name" placeholder="bv. 5 of Terras A"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cm('m-table')">Annuleer</button>
+      <button class="btn btn-primary" onclick="saveTable()">Toevoegen</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: STAFF -->
 <div class="modal-bg" id="m-staff">
   <div class="modal">
@@ -494,7 +543,7 @@ var CAT_COLORS = [
 ];
 
 var state = {
-  fbUrl:'', printers:[], categories:[], staff:[], menu:[],
+  fbUrl:'', printers:[], categories:[], staff:[], menu:[], tables:[],
   orders:[], nextMid:1, nextPid:1, nextCid:1
 };
 
@@ -545,6 +594,7 @@ function fetchAll(){
         if(settings.categories) state.categories=settings.categories;
         if(settings.staff) state.staff=settings.staff;
         if(settings.menu) state.menu=settings.menu;
+        if(settings.tables) state.tables=settings.tables;
         if(settings.nextMid) state.nextMid=settings.nextMid;
         if(settings.nextPid) state.nextPid=settings.nextPid;
         if(settings.nextCid) state.nextCid=settings.nextCid;
@@ -568,7 +618,7 @@ function pushSettings(){
     console.warn('[Settings] Niet pushen: nog niet gesynchroniseerd');
     return;
   }
-  fbPut('/settings',{printers:state.printers,categories:state.categories,staff:state.staff,menu:state.menu,nextMid:state.nextMid,nextPid:state.nextPid,nextCid:state.nextCid}).catch(function(){});
+  fbPut('/settings',{printers:state.printers,categories:state.categories,staff:state.staff,menu:state.menu,tables:state.tables,nextMid:state.nextMid,nextPid:state.nextPid,nextCid:state.nextCid}).catch(function(){});
 }
 
 function startPolling(){
@@ -594,6 +644,7 @@ function renderAll(){
   renderMenuTable();
   renderCatTable();
   renderPrinterTable();
+  renderTablesList();
   renderStaffTable();
   renderStats();
   if(selectedGroupKey) renderDetailPanel();
@@ -746,8 +797,10 @@ function markAllServed(table,name){
   notify('Alles geserveerd ✓');renderAll();
 }
 function markPaid(table,name){
+  var paidTs=Date.now();
   state.orders.filter(function(o){return o.table==table&&o.name===name;}).forEach(function(o){
     o.paid=true;
+    o.paidTs=paidTs;
     if(state.fbUrl&&o.fbId) fbPut('/orders/'+o.fbId,o);
   });
   selectedGroupKey=null;notify('Betaald ✓');renderAll();
@@ -777,18 +830,32 @@ function renderHistoryTable(){
   var el=document.getElementById('history-table');if(!el)return;
   var groups=getGroups(true).sort(function(a,b){return b.lastTs-a.lastTs;});
   if(!groups.length){el.innerHTML='<div class="empty-table">Geen afgesloten bestellingen</div>';return;}
-  var html='<table><thead><tr><th></th><th>Tafel</th><th>Naam</th><th>Items</th><th>Opnemer(s)</th><th>Tijdstip</th><th style="text-align:right">Totaal</th><th class="col-actions">Acties</th></tr></thead><tbody>';
+  var html='<table><thead><tr><th></th><th>Tafel</th><th>Naam</th><th>Items</th><th>Opnemer(s)</th><th>Geopend</th><th>Betaald</th><th>Duur</th><th style="text-align:right">Totaal</th><th class="col-actions">Acties</th></tr></thead><tbody>';
   groups.forEach(function(g){
     var items=g.orders.reduce(function(a,o){return a.concat(o.items);},[]);
     var qty=items.reduce(function(s,i){return s+i.qty;},0);
     var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
     var waiters=[];g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
-    var time=new Date(g.lastTs).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
+
+    var firstTs=Math.min.apply(null, g.orders.map(function(o){return o.ts||0;}));
+    var paidTs=g.orders.map(function(o){return o.paidTs;}).filter(Boolean);
+    var lastPaid=paidTs.length?Math.max.apply(null, paidTs):g.lastTs;
+
+    var openedDate=new Date(firstTs);
+    var paidDate=new Date(lastPaid);
+    var openedStr=openedDate.toLocaleString('nl-BE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    var paidStr=paidDate.toLocaleString('nl-BE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    var durMin=Math.round((lastPaid-firstTs)/60000);
+    var durStr=durMin>=60?Math.floor(durMin/60)+'u'+(durMin%60).toString().padStart(2,'0'):durMin+'m';
+
     var k=g.table+'__'+g.name;
     var expanded=expandedHistKeys[k];
     html+='<tr style="cursor:pointer" onclick="toggleHistDetail(\''+esc(k)+'\')">';
     html+='<td style="width:30px;color:var(--text-muted)">'+(expanded?'▼':'▶')+'</td>';
-    html+='<td><strong>'+g.table+'</strong></td><td>'+g.name+'</td><td>'+qty+'</td><td>'+waiters.join(', ')+'</td><td>'+time+'</td>';
+    html+='<td><strong>'+g.table+'</strong></td><td>'+g.name+'</td><td>'+qty+'</td><td>'+waiters.join(', ')+'</td>';
+    html+='<td style="font-size:12px;color:var(--text-muted)">'+openedStr+'</td>';
+    html+='<td style="font-size:12px;color:var(--text-muted)">'+paidStr+'</td>';
+    html+='<td style="font-size:12px">'+durStr+'</td>';
     html+='<td style="text-align:right;font-weight:600">€'+total.toFixed(2)+'</td>';
     html+='<td class="col-actions" onclick="event.stopPropagation()">';
     html+='<button class="btn btn-secondary btn-sm" onclick="reopenAsServed(\''+esc(g.table)+'\',\''+esc(g.name)+'\')" title="Terugzetten naar geserveerd">↩ Geserveerd</button> ';
@@ -796,7 +863,7 @@ function renderHistoryTable(){
     html+='<button class="btn btn-ghost btn-icon" onclick="deleteHistGroup(\''+esc(g.table)+'\',\''+esc(g.name)+'\')" title="Verwijderen" style="color:var(--danger)">✕</button>';
     html+='</td></tr>';
     if(expanded){
-      html+='<tr><td></td><td colspan="7" style="background:#fafbfc;padding:0">';
+      html+='<tr><td></td><td colspan="9" style="background:#fafbfc;padding:0">';
       html+='<div style="padding:14px 18px">';
       g.orders.forEach(function(o,oidx){
         var oTime=new Date(o.ts).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
@@ -921,6 +988,82 @@ function renderStaffTable(){
     html+='<td class="col-actions">'+(s.isAdmin?'':'<button class="btn btn-ghost btn-icon" onclick="delStaff('+idx+')" title="Verwijderen" style="color:var(--danger)">✕</button>')+'</td></tr>';
   });
   el.innerHTML=html;
+}
+
+// ── TAFELS ────────────────────────────────────────────────
+function renderTablesList(){
+  var el=document.getElementById('tables-list');if(!el)return;
+  var tables=state.tables||[];
+  var cnt=document.getElementById('tables-count');if(cnt)cnt.textContent=tables.length+' tafel'+(tables.length===1?'':'s');
+  if(!tables.length){el.innerHTML='<div class="empty-table">Nog geen tafels — voeg er een toe of gebruik bulk bewerken</div>';return;}
+  var html='<table><thead><tr><th>#</th><th>Tafel</th><th>In gebruik</th><th class="col-actions">Acties</th></tr></thead><tbody>';
+  tables.forEach(function(t,idx){
+    var inUse=state.orders.filter(function(o){return !o.paid&&String(o.table)===String(t);}).length;
+    html+='<tr><td>'+(idx+1)+'</td><td><strong>'+t+'</strong></td>';
+    html+='<td>'+(inUse?'<span class="status status-partial">'+inUse+' actief</span>':'<span style="color:var(--text-muted)">—</span>')+'</td>';
+    html+='<td class="col-actions"><button class="btn btn-ghost btn-icon" onclick="moveTable('+idx+',-1)" title="Omhoog">▲</button> <button class="btn btn-ghost btn-icon" onclick="moveTable('+idx+',1)" title="Omlaag">▼</button> <button class="btn btn-ghost btn-icon" onclick="delTable('+idx+')" title="Verwijderen" style="color:var(--danger)">✕</button></td></tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+  // sync de bulk textarea
+  var bulk=document.getElementById('tables-bulk');
+  if(bulk) bulk.value=tables.join(', ');
+}
+
+function openTableModal(){document.getElementById('t-name').value='';om('m-table');}
+function saveTable(){
+  var name=document.getElementById('t-name').value.trim();
+  if(!name){notify('Vul een tafelnaam in');return;}
+  if(!state.tables) state.tables=[];
+  if(state.tables.indexOf(name)!==-1){notify('Tafel bestaat al');return;}
+  state.tables.push(name);
+  pushSettings();cm('m-table');renderTablesList();notify('Tafel toegevoegd ✓');
+}
+function delTable(idx){
+  if(!confirm('Tafel "'+state.tables[idx]+'" verwijderen?')) return;
+  state.tables.splice(idx,1);pushSettings();renderTablesList();notify('Verwijderd');
+}
+function moveTable(idx,dir){
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=state.tables.length) return;
+  var tmp=state.tables[idx];state.tables[idx]=state.tables[newIdx];state.tables[newIdx]=tmp;
+  pushSettings();renderTablesList();
+}
+function saveBulkTables(){
+  var raw=document.getElementById('tables-bulk').value;
+  var arr=raw.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  state.tables=arr;
+  pushSettings();renderTablesList();notify('Tafels opgeslagen ✓ ('+arr.length+')');
+}
+
+function exportTablesXlsx(){
+  if(typeof XLSX==='undefined'){notify('Excel-library nog niet geladen');return;}
+  var rows=(state.tables||[]).map(function(t,idx){return {Volgorde:idx+1, Tafel:t};});
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Tafels');
+  XLSX.writeFile(wb, 'tafels.xlsx');
+  notify('Tafels geëxporteerd ✓');
+}
+function importTablesXlsx(input){
+  var file=input.files[0];if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var sheet=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(sheet);
+      if(!rows.length){notify('Geen data gevonden');return;}
+      if(!confirm('Bestaande tafels vervangen door '+rows.length+' rijen uit het bestand?')) return;
+      // sorteer op Volgorde indien aanwezig
+      rows.sort(function(a,b){return (parseInt(a.Volgorde)||0)-(parseInt(b.Volgorde)||0);});
+      var newTables=rows.map(function(r){return String(r.Tafel||r.Naam||r.Name||'').trim();}).filter(Boolean);
+      state.tables=newTables;
+      pushSettings();renderTablesList();
+      notify('Geïmporteerd: '+newTables.length+' tafels ✓');
+    }catch(err){console.error(err);notify('Fout bij importeren: '+err.message);}
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ── ITEM MODAL ────────────────────────────────────────────
@@ -1048,7 +1191,8 @@ function getStatsData(){
 
 function renderStats(){
   var orders=getStatsData();
-  var allItems=orders.reduce(function(a,o){return a.concat(o.items);},[]);
+  // injecteer ts per item zodat we per uur kunnen aggregeren
+  var allItems=orders.reduce(function(a,o){return a.concat(o.items.map(function(i){return Object.assign({},i,{_ts:o.ts,_paidTs:o.paidTs});}));},[]);
   var totalQty=allItems.reduce(function(s,i){return s+i.qty;},0);
   var totalVal=allItems.reduce(function(s,i){return s+i.price*i.qty;},0);
 
@@ -1060,6 +1204,40 @@ function renderStats(){
   var si=document.getElementById('stats-items');if(si)si.textContent=totalQty;
   var su=document.getElementById('stats-unique');if(su)su.textContent=Object.keys(uniqueIds).length;
   var st=document.getElementById('stats-total');if(st)st.textContent='€'+totalVal.toFixed(2);
+
+  // per uur
+  var byHour={};
+  allItems.forEach(function(i){
+    if(!i._ts) return;
+    var d=new Date(i._ts);
+    var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':00';
+    if(!byHour[key]) byHour[key]={qty:0,total:0};
+    byHour[key].qty+=i.qty;
+    byHour[key].total+=i.price*i.qty;
+  });
+  var hrEl=document.getElementById('stats-hourly');
+  if(hrEl){
+    var hourKeys=Object.keys(byHour).sort();
+    if(!hourKeys.length){hrEl.innerHTML='<div class="empty-table">Nog geen data</div>';}
+    else{
+      var maxQty=Math.max.apply(null, hourKeys.map(function(k){return byHour[k].qty;}));
+      var html='<div style="display:flex;flex-direction:column;gap:6px">';
+      hourKeys.forEach(function(k){
+        var d=new Date(k);
+        var label=d.toLocaleString('nl-BE',{day:'2-digit',month:'2-digit'})+' '+d.getHours().toString().padStart(2,'0')+'u';
+        var pct=(byHour[k].qty/maxQty)*100;
+        html+='<div style="display:flex;align-items:center;gap:10px">';
+        html+='<div style="width:90px;font-size:12px;color:var(--text-muted)">'+label+'</div>';
+        html+='<div style="flex:1;background:#f1f5f9;border-radius:6px;height:24px;position:relative;overflow:hidden">';
+        html+='<div style="background:linear-gradient(90deg,var(--primary),#60a5fa);height:100%;width:'+pct+'%;border-radius:6px;display:flex;align-items:center;padding-left:10px;color:#fff;font-size:12px;font-weight:600;min-width:30px">'+byHour[k].qty+'</div>';
+        html+='</div>';
+        html+='<div style="width:80px;text-align:right;font-size:12px;color:var(--text-muted)">€'+byHour[k].total.toFixed(2)+'</div>';
+        html+='</div>';
+      });
+      html+='</div>';
+      hrEl.innerHTML=html;
+    }
+  }
 
   // per categorie
   var byCat={};
@@ -1121,7 +1299,7 @@ function renderStats(){
 function exportStatsXlsx(){
   if(typeof XLSX==='undefined'){notify('Excel-library nog niet geladen');return;}
   var orders=getStatsData();
-  var allItems=orders.reduce(function(a,o){return a.concat(o.items.map(function(i){return Object.assign({},i,{table:o.table,name_klant:o.name,waiter:o.waiter,ts:o.ts,paid:o.paid});}));},[]);
+  var allItems=orders.reduce(function(a,o){return a.concat(o.items.map(function(i){return Object.assign({},i,{table:o.table,name_klant:o.name,waiter:o.waiter,ts:o.ts,paidTs:o.paidTs,paid:o.paid});}));},[]);
 
   // Per item samenvatting
   var byItem={};
@@ -1143,13 +1321,45 @@ function exportStatsXlsx(){
   });
   var perCat=Object.values(byCat).sort(function(a,b){return b.Aantal-a.Aantal;});
 
+  // Per uur
+  var byHour={};
+  allItems.forEach(function(i){
+    if(!i.ts) return;
+    var d=new Date(i.ts);
+    var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':00';
+    if(!byHour[key]) byHour[key]={Uur:key,Aantal:0,Omzet:0,Categorieen:{}};
+    byHour[key].Aantal+=i.qty;
+    byHour[key].Omzet+=i.price*i.qty;
+    var cn=catNameById(i.cat);
+    byHour[key].Categorieen[cn]=(byHour[key].Categorieen[cn]||0)+i.qty;
+  });
+  var perHour=Object.keys(byHour).sort().map(function(k){
+    var h=byHour[k];
+    var topCat=Object.keys(h.Categorieen).sort(function(a,b){return h.Categorieen[b]-h.Categorieen[a];})[0]||'';
+    return {Uur:h.Uur,Aantal:h.Aantal,Omzet:h.Omzet,'Top categorie':topCat};
+  });
+
+  // Per uur per categorie (apart blad voor cross-tabel analyse)
+  var hourCatRows=[];
+  Object.keys(byHour).sort().forEach(function(k){
+    var h=byHour[k];
+    Object.keys(h.Categorieen).forEach(function(cn){
+      hourCatRows.push({Uur:k,Categorie:cn,Aantal:h.Categorieen[cn]});
+    });
+  });
+
   // Alle bestellingen detail
   var allRows=allItems.map(function(i){
+    var openTs=i.ts?new Date(i.ts):null;
+    var payTs=i.paidTs?new Date(i.paidTs):null;
     return {
       Tafel:i.table,
       Klant:i.name_klant,
       Opnemer:i.waiter||'',
-      Tijdstip:new Date(i.ts).toLocaleString('nl-BE'),
+      Datum:openTs?openTs.toLocaleDateString('nl-BE'):'',
+      Tijdstip:openTs?openTs.toLocaleTimeString('nl-BE'):'',
+      Uur:openTs?openTs.getHours():'',
+      Weekdag:openTs?openTs.toLocaleDateString('nl-BE',{weekday:'long'}):'',
       Item:i.name,
       Categorie:catNameById(i.cat),
       Variatie:i.variation||'',
@@ -1158,13 +1368,44 @@ function exportStatsXlsx(){
       Stuksprijs:i.price,
       Subtotaal:i.price*i.qty,
       Geserveerd:i.served?'Ja':'Nee',
-      Betaald:i.paid?'Ja':'Nee'
+      Betaald:i.paid?'Ja':'Nee',
+      Betaaldatum:payTs?payTs.toLocaleDateString('nl-BE'):'',
+      Betaaltijdstip:payTs?payTs.toLocaleTimeString('nl-BE'):''
     };
   });
+
+  // Per tafel (samenvatting)
+  var byTable={};
+  orders.forEach(function(o){
+    var k=o.table+'__'+o.name+'__'+(o.ts||0);
+    if(!byTable[k]){
+      var openTs=o.ts?new Date(o.ts):null;
+      var payTs=o.paidTs?new Date(o.paidTs):null;
+      byTable[k]={
+        Tafel:o.table,
+        Klant:o.name,
+        Opnemer:o.waiter||'',
+        Datum:openTs?openTs.toLocaleDateString('nl-BE'):'',
+        Geopend:openTs?openTs.toLocaleTimeString('nl-BE'):'',
+        Betaald:payTs?payTs.toLocaleTimeString('nl-BE'):'',
+        'Duur (min)':openTs&&payTs?Math.round((payTs-openTs)/60000):'',
+        Aantal_items:0,
+        Totaal:0
+      };
+    }
+    o.items.forEach(function(i){
+      byTable[k].Aantal_items+=i.qty;
+      byTable[k].Totaal+=i.price*i.qty;
+    });
+  });
+  var perTable=Object.values(byTable).sort(function(a,b){return (a.Datum+a.Geopend).localeCompare(b.Datum+b.Geopend);});
 
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perItem), 'Per item');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perCat), 'Per categorie');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perHour), 'Per uur');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hourCatRows), 'Uur x Categorie');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perTable), 'Per tafel');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allRows), 'Alle bestellingen');
 
   var date=new Date().toISOString().slice(0,10);
