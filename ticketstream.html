@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ticket Stream — Popup Restaurant</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#1a1a1a;color:#e2e8f0;min-height:100vh;font-size:14px;background-image:radial-gradient(circle at 20% 20%,#2a2a2a 0%,#1a1a1a 50%)}
+
+/* TOPBAR */
+.topbar{background:#111;padding:12px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:50;border-bottom:1px solid #333;flex-wrap:wrap}
+.topbar h1{font-size:18px;font-weight:700;color:#fff;flex-shrink:0}
+.topbar h1 span{color:#fbbf24}
+.controls{display:flex;gap:8px;flex:1;flex-wrap:wrap;align-items:center}
+.printer-select{background:#222;color:#fff;border:1px solid #444;padding:7px 12px;border-radius:6px;font-size:13px;font-family:inherit}
+.printer-select:focus{outline:none;border-color:#fbbf24}
+.btn{background:#333;color:#e2e8f0;border:1px solid #444;padding:7px 12px;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600}
+.btn:hover{background:#444}
+.btn-warn{background:#dc2626;color:#fff;border-color:#dc2626}
+.btn-warn:hover{background:#b91c1c}
+.btn-active{background:#fbbf24;color:#000;border-color:#fbbf24}
+.sync-pill{font-size:12px;display:flex;align-items:center;gap:6px;background:#222;padding:5px 10px;border-radius:20px;color:#94a3b8}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
+.sync-dot.ok{background:#22c55e}
+.sync-dot.err{background:#dc2626}
+.counter{font-size:12px;color:#94a3b8;background:#222;padding:5px 10px;border-radius:20px}
+.counter strong{color:#fbbf24}
+
+/* SETUP */
+.setup{max-width:500px;margin:60px auto;padding:0 20px}
+.setup-card{background:#222;border:1px solid #333;border-radius:14px;padding:28px}
+.setup h2{font-size:22px;margin-bottom:6px;color:#fff}
+.setup p{color:#94a3b8;font-size:14px;margin-bottom:20px;line-height:1.5}
+.setup label{display:block;color:#94a3b8;font-size:13px;margin-bottom:6px;margin-top:14px}
+.setup input{width:100%;padding:12px;border-radius:10px;border:1px solid #444;background:#1a1a1a;color:#fff;font-size:15px;font-family:inherit}
+.setup input:focus{outline:none;border-color:#fbbf24}
+.setup button{width:100%;padding:14px;background:#fbbf24;color:#000;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;font-family:inherit}
+.setup button:hover{background:#f59e0b}
+
+/* MAIN */
+.main{padding:24px 20px;max-width:1400px;margin:0 auto}
+.empty{text-align:center;padding:80px 20px;color:#64748b}
+.empty .ico{font-size:64px;margin-bottom:14px;opacity:.4}
+
+/* TICKET WALL */
+.tickets{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}
+
+.ticket{background:#fefce8;color:#000;border-radius:4px;padding:16px 18px;font-family:'Courier New',ui-monospace,monospace;box-shadow:0 6px 20px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.3);position:relative;animation:slideIn .35s ease-out;line-height:1.45;font-size:13px}
+.ticket.bill{background:#fef3c7}
+.ticket.flash{animation:slideIn .35s ease-out, flash 1s ease-out}
+
+@keyframes slideIn{
+  from{transform:translateY(-30px) rotate(-2deg);opacity:0}
+  to{transform:translateY(0) rotate(0);opacity:1}
+}
+@keyframes flash{
+  0%{box-shadow:0 0 0 4px #fbbf24, 0 6px 20px rgba(0,0,0,.4)}
+  100%{box-shadow:0 6px 20px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.3)}
+}
+
+/* perforated edges */
+.ticket::before, .ticket::after{
+  content:'';position:absolute;left:0;right:0;height:8px;
+  background-image:radial-gradient(circle at 5px 4px, transparent 3px, #1a1a1a 3.5px);
+  background-size:10px 8px;background-repeat:repeat-x;
+}
+.ticket::before{top:-8px;background-position:0 4px;
+  background-image:radial-gradient(circle at 5px 8px, #fefce8 4px, transparent 4.5px);}
+.ticket.bill::before{background-image:radial-gradient(circle at 5px 8px, #fef3c7 4px, transparent 4.5px);}
+.ticket::after{bottom:-8px;background-position:0 -4px;
+  background-image:radial-gradient(circle at 5px 0, #fefce8 4px, transparent 4.5px);}
+.ticket.bill::after{background-image:radial-gradient(circle at 5px 0, #fef3c7 4px, transparent 4.5px);}
+
+.ticket-head{text-align:center;font-weight:700;font-size:15px;border-bottom:2px dashed #aaa;padding-bottom:8px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.ticket-time{display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:10px}
+.ticket-table{font-size:18px;font-weight:700;text-align:center;padding:8px 0;border-top:1px dashed #aaa;border-bottom:1px dashed #aaa;margin-bottom:10px}
+.ticket-waiter{font-size:12px;color:#666;text-align:center;margin-bottom:8px}
+.ticket-items{margin:6px 0}
+.ticket-item{margin-bottom:8px}
+.ticket-item-line{display:flex;gap:8px}
+.ticket-qty{font-weight:700;min-width:30px}
+.ticket-name{flex:1;font-weight:600}
+.ticket-price{font-weight:700;text-align:right}
+.ticket-var{margin-left:30px;font-size:12px;color:#7c2d12;font-style:italic}
+.ticket-comment{margin-left:30px;font-size:12px;color:#92400e;font-weight:600;background:#fef3c7;padding:2px 6px;border-radius:3px;display:inline-block;margin-top:2px}
+.ticket-foot{border-top:2px dashed #aaa;padding-top:8px;margin-top:8px;text-align:center;font-size:12px;color:#666}
+.ticket-total{display:flex;justify-content:space-between;font-size:16px;font-weight:700;padding:10px 0;border-top:2px solid #000;border-bottom:2px solid #000;margin:10px 0}
+.printer-tag{display:inline-block;background:#000;color:#fff;font-size:10px;padding:2px 8px;border-radius:3px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.printer-tag.bar{background:#1d4ed8}
+.printer-tag.kitchen{background:#92400e}
+.printer-tag.cold{background:#065f46}
+.printer-tag.bill{background:#6b21a8}
+
+/* responsive */
+@media (max-width:600px){
+  .tickets{grid-template-columns:1fr}
+  .topbar{padding:10px 12px}
+  .topbar h1{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup-screen" class="setup" style="display:none">
+  <div class="setup-card">
+    <h2>🎫 Ticket Stream</h2>
+    <p>Live weergave van tickets zoals ze door de printers afgedrukt zouden worden. Ideaal om te testen zonder echte printers.</p>
+
+    <label>Firebase Database URL</label>
+    <input type="text" id="setup-fb" placeholder="https://jouw-project.firebasedatabase.app">
+
+    <button onclick="setupSave()">Verbinden</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main-screen" style="display:none">
+  <div class="topbar">
+    <h1>🎫 <span>Ticket Stream</span></h1>
+    <div class="controls">
+      <select class="printer-select" id="printer-filter" onchange="renderTickets()">
+        <option value="all">Alle printers</option>
+      </select>
+      <button class="btn" id="btn-pause" onclick="togglePause()">⏸ Pauze</button>
+      <button class="btn" id="btn-sound" onclick="toggleSound()">🔔 Geluid uit</button>
+      <button class="btn btn-warn" onclick="clearTickets()">🗑 Wis stream</button>
+    </div>
+    <div class="counter">Tickets: <strong id="ticket-count">0</strong></div>
+    <div class="sync-pill"><span class="sync-dot" id="sync-dot"></span><span id="sync-txt">...</span></div>
+    <button class="btn" onclick="openSettings()">⚙</button>
+  </div>
+  <div class="main">
+    <div id="tickets-container"></div>
+  </div>
+</div>
+
+<script>
+var state = {
+  fbUrl: '',
+  printers: [],
+  categories: [],
+  knownOrderIds: {},   // fbId -> true (al verwerkt)
+  tickets: [],          // {id, printerId, printerName, type, html, ts}
+  paused: false,
+  soundOn: false,
+  filterPrinterId: 'all'
+};
+var pollTimer = null;
+var firstLoad = true;
+var audioCtx = null;
+
+function loadConfig(){
+  try{
+    var raw=localStorage.getItem('tickets-config');
+    if(raw){var c=JSON.parse(raw);state.fbUrl=c.fbUrl||'';state.soundOn=!!c.soundOn;return true;}
+  }catch(e){}
+  return false;
+}
+function saveConfig(){
+  localStorage.setItem('tickets-config', JSON.stringify({fbUrl:state.fbUrl, soundOn:state.soundOn}));
+}
+
+function setupSave(){
+  var url=document.getElementById('setup-fb').value.trim().replace(/\/$/,'');
+  if(!url) return;
+  state.fbUrl=url;saveConfig();start();
+}
+function openSettings(){
+  document.getElementById('setup-fb').value=state.fbUrl||'';
+  document.getElementById('setup-screen').style.display='block';
+  document.getElementById('main-screen').style.display='none';
+}
+
+function start(){
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('main-screen').style.display='block';
+  updateSoundBtn();
+  if(pollTimer) clearInterval(pollTimer);
+  fetchAll();
+  pollTimer=setInterval(fetchAll, 2500);
+}
+
+function setSync(s){
+  var dot=document.getElementById('sync-dot'),txt=document.getElementById('sync-txt');
+  if(s==='ok'){dot.className='sync-dot ok';txt.textContent='Live';}
+  else if(s==='err'){dot.className='sync-dot err';txt.textContent='Fout';}
+  else{dot.className='sync-dot';txt.textContent='...';}
+}
+
+function fetchAll(){
+  if(!state.fbUrl) return;
+  Promise.all([
+    fetch(state.fbUrl+'/orders.json').then(function(r){return r.json();}),
+    fetch(state.fbUrl+'/settings.json').then(function(r){return r.json();})
+  ]).then(function(res){
+    setSync('ok');
+    var orders=res[0]?Object.values(res[0]):[];
+    if(res[1]){
+      if(res[1].printers) state.printers=res[1].printers;
+      if(res[1].categories) state.categories=res[1].categories;
+      updatePrinterFilter();
+    }
+
+    if(state.paused) return;
+
+    if(firstLoad){
+      // markeer alle bestaande als bekend, behalve de laatste 3 om de pagina niet leeg te tonen
+      orders.sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+      var skipUntil=Math.max(0, orders.length-3);
+      orders.forEach(function(o,idx){
+        if(o.fbId){
+          state.knownOrderIds[o.fbId]=true;
+          if(idx>=skipUntil) processOrder(o, true);
+        }
+      });
+      firstLoad=false;
+      renderTickets();
+      return;
+    }
+
+    // detecteer nieuwe orders en betalingen
+    orders.forEach(function(o){
+      if(!o.fbId) return;
+      if(!state.knownOrderIds[o.fbId]){
+        state.knownOrderIds[o.fbId]=true;
+        processOrder(o, false);
+      } else {
+        // check of order net betaald is — toon dan kassaticket
+        var existing=state.knownOrderIds[o.fbId];
+        if(existing===true && o.paid){
+          state.knownOrderIds[o.fbId]='paid';
+          processBillTicket(o, false);
+        }
+      }
+    });
+
+    renderTickets();
+  }).catch(function(){setSync('err');});
+}
+
+function getCategoryById(id){return state.categories.find(function(c){return c.id===id;});}
+function getPrinterById(id){return state.printers.find(function(p){return p.id===id;});}
+function getPrinterClass(p){
+  if(!p) return '';
+  if(p.isBill) return 'bill';
+  var n=(p.name||'').toLowerCase();
+  if(n.indexOf('bar')!==-1) return 'bar';
+  if(n.indexOf('koud')!==-1||n.indexOf('cold')!==-1) return 'cold';
+  if(n.indexOf('keuken')!==-1||n.indexOf('kitchen')!==-1) return 'kitchen';
+  return '';
+}
+
+function processOrder(order, silent){
+  // groepeer items per printer via categorie-mapping
+  var byPrinter={};
+  order.items.forEach(function(item){
+    var cat=getCategoryById(item.cat);
+    if(!cat||!cat.printers) return;
+    cat.printers.forEach(function(pid){
+      var printer=getPrinterById(pid);
+      if(!printer) return;
+      // kassaprinters krijgen geen ticket per nieuwe bestelling — alleen rekeningen
+      if(printer.isBill) return;
+      if(!byPrinter[pid]) byPrinter[pid]={printer:printer,items:[]};
+      byPrinter[pid].items.push(item);
+    });
+  });
+  Object.values(byPrinter).forEach(function(g){
+    state.tickets.unshift({
+      id:'t'+Date.now()+Math.random(),
+      type:'order',
+      printerId:g.printer.id,
+      printerName:g.printer.name,
+      printerClass:getPrinterClass(g.printer),
+      order:order,
+      items:g.items,
+      ts:order.ts||Date.now(),
+      flashing:!silent
+    });
+  });
+  if(!silent && Object.keys(byPrinter).length) playSound();
+}
+
+function processBillTicket(order, silent){
+  // zoek de kassaprinter
+  var billPrinter=state.printers.find(function(p){return p.isBill;});
+  if(!billPrinter) return;
+  // verzamel alle items van deze tafel/naam (uit alle orders met zelfde tafel+naam)
+  // we tonen alleen de items van deze ene order — admin/mobile bouwt rekening uit alle rondes
+  // dus we tonen één bill ticket per "paid" actie
+  state.tickets.unshift({
+    id:'t'+Date.now()+Math.random(),
+    type:'bill',
+    printerId:billPrinter.id,
+    printerName:billPrinter.name,
+    printerClass:'bill',
+    order:order,
+    items:order.items,
+    ts:Date.now(),
+    flashing:!silent
+  });
+  if(!silent) playSound();
+}
+
+function updatePrinterFilter(){
+  var sel=document.getElementById('printer-filter');
+  if(!sel) return;
+  var current=sel.value;
+  var html='<option value="all">Alle printers</option>';
+  state.printers.forEach(function(p){
+    html+='<option value="'+p.id+'">'+p.name+(p.isBill?' (kassa)':'')+'</option>';
+  });
+  sel.innerHTML=html;
+  if(current) sel.value=current;
+  state.filterPrinterId=sel.value;
+}
+
+function renderTickets(){
+  var el=document.getElementById('tickets-container');
+  var sel=document.getElementById('printer-filter');
+  if(sel) state.filterPrinterId=sel.value;
+  var filtered=state.tickets.filter(function(t){
+    return state.filterPrinterId==='all'||t.printerId===state.filterPrinterId;
+  });
+  document.getElementById('ticket-count').textContent=filtered.length;
+  if(!filtered.length){
+    el.innerHTML='<div class="empty"><div class="ico">🎫</div><div style="font-size:18px;color:#94a3b8">Wachten op tickets...</div><div style="font-size:14px;margin-top:8px">Plaats een bestelling in de bediening-app om hier een ticket te zien verschijnen.</div></div>';
+    return;
+  }
+  var html='<div class="tickets">';
+  filtered.forEach(function(t){
+    html+=t.type==='bill'?renderBillTicket(t):renderOrderTicket(t);
+  });
+  html+='</div>';
+  el.innerHTML=html;
+  // remove flashing flag after first paint
+  state.tickets.forEach(function(t){t.flashing=false;});
+}
+
+function renderOrderTicket(t){
+  var time=new Date(t.ts).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var date=new Date(t.ts).toLocaleDateString('nl-BE');
+  var html='<div class="ticket'+(t.flashing?' flash':'')+'">';
+  html+='<span class="printer-tag '+(t.printerClass||'')+'">'+t.printerName+'</span>';
+  html+='<div class="ticket-head">'+t.printerName+'</div>';
+  html+='<div class="ticket-time"><span>'+date+'</span><span>'+time+'</span></div>';
+  html+='<div class="ticket-table">TAFEL '+t.order.table+'</div>';
+  html+='<div class="ticket-waiter">'+(t.order.name||'')+(t.order.waiter?' · 👤 '+t.order.waiter:'')+'</div>';
+  html+='<div class="ticket-items">';
+  t.items.forEach(function(i){
+    html+='<div class="ticket-item">';
+    html+='<div class="ticket-item-line"><span class="ticket-qty">'+i.qty+'×</span><span class="ticket-name">'+i.name+'</span></div>';
+    if(i.variation) html+='<div class="ticket-var">› '+i.variation+'</div>';
+    if(i.comment) html+='<div class="ticket-comment">* '+i.comment+'</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  html+='<div class="ticket-foot">— Bon #'+(t.order.id||'?')+' —</div>';
+  html+='</div>';
+  return html;
+}
+
+function renderBillTicket(t){
+  var time=new Date(t.ts).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
+  var date=new Date(t.ts).toLocaleDateString('nl-BE');
+  var total=t.items.reduce(function(s,i){return s+i.price*i.qty;},0);
+  var html='<div class="ticket bill'+(t.flashing?' flash':'')+'">';
+  html+='<span class="printer-tag bill">KASSA</span>';
+  html+='<div class="ticket-head">POPUP RESTAURANT</div>';
+  html+='<div class="ticket-time"><span>'+date+'</span><span>'+time+'</span></div>';
+  html+='<div class="ticket-table">TAFEL '+t.order.table+'</div>';
+  html+='<div class="ticket-waiter">'+(t.order.name||'')+'</div>';
+  html+='<div class="ticket-items">';
+  t.items.forEach(function(i){
+    html+='<div class="ticket-item">';
+    html+='<div class="ticket-item-line"><span class="ticket-qty">'+i.qty+'×</span><span class="ticket-name">'+i.name+'</span><span class="ticket-price">€'+(i.price*i.qty).toFixed(2)+'</span></div>';
+    if(i.variation) html+='<div class="ticket-var">› '+i.variation+'</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+  html+='<div class="ticket-total"><span>TOTAAL</span><span>€'+total.toFixed(2)+'</span></div>';
+  html+='<div class="ticket-foot">Bedankt voor uw bezoek!</div>';
+  html+='</div>';
+  return html;
+}
+
+// ── CONTROLS ──────────────────────────────────────────────
+function togglePause(){
+  state.paused=!state.paused;
+  var btn=document.getElementById('btn-pause');
+  btn.textContent=state.paused?'▶ Hervat':'⏸ Pauze';
+  btn.className=state.paused?'btn btn-active':'btn';
+}
+function toggleSound(){state.soundOn=!state.soundOn;saveConfig();updateSoundBtn();}
+function updateSoundBtn(){
+  var btn=document.getElementById('btn-sound');
+  if(!btn) return;
+  btn.textContent=state.soundOn?'🔔 Geluid aan':'🔕 Geluid uit';
+  btn.className=state.soundOn?'btn btn-active':'btn';
+}
+function clearTickets(){
+  if(!confirm('Alle getoonde tickets wissen?')) return;
+  state.tickets=[];renderTickets();
+}
+
+function playSound(){
+  if(!state.soundOn) return;
+  try{
+    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    var o=audioCtx.createOscillator();
+    var g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);
+    o.frequency.value=880;o.type='sine';
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.18);
+    o.start();o.stop(audioCtx.currentTime+0.2);
+  }catch(e){}
+}
+
+// ── INIT ──────────────────────────────────────────────────
+if(loadConfig() && state.fbUrl){
+  start();
+} else {
+  document.getElementById('setup-screen').style.display='block';
+}
+</script>
+</body>
+</html>
