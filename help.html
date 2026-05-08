@@ -101,6 +101,8 @@ tr:last-child td{border-bottom:none}
       <a href="#g-deploy">2. App online zetten</a>
       <a href="#g-config">3. Eerste configuratie</a>
       <a href="#g-install">4. Installeren op telefoon</a>
+      <a href="#g-install-iphone" class="h3">iPhone (iOS)</a>
+      <a href="#g-install-android" class="h3">Android</a>
       <a href="#g-roles">Rollen en URLs</a>
       <a href="#g-test">Testen vóór een event</a>
       <a href="#g-troubleshoot">Problemen oplossen</a>
@@ -231,34 +233,96 @@ tr:last-child td{border-bottom:none}
       </div>
 
       <h2 id="g-install">4. Installeren op telefoon</h2>
-      <p>De bediening-app werkt direct in een browser, maar als PWA voelt het als een echte app aan.</p>
+      <p>De bediening-app werkt direct in de browser, maar als <strong>PWA</strong> (Progressive Web App) voelt het als een echte app aan: eigen icoon op het startscherm, geen browserbalk en sneller laden.</p>
+
+      <div class="callout callout-info">
+        <div class="callout-icon">💡</div>
+        <p><strong>Belangrijk:</strong> log eerst eenmalig als admin in (PIN <code>9999</code>) om de Firebase URL te configureren. Daarna pas installeren op het startscherm — alle gedeelde instellingen worden dan automatisch geladen.</p>
+      </div>
+
+      <h3 id="g-install-iphone">iPhone (iOS) — Safari</h3>
+
+      <div class="callout callout-warn">
+        <div class="callout-icon">📱</div>
+        <p>Op iPhone werkt installatie als PWA <strong>alleen via Safari</strong>. Chrome of Firefox op iOS ondersteunen deze functie niet.</p>
+      </div>
 
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-content">
-          <h4>Open de app</h4>
-          <p>Ga naar <code>https://jouwgebruikersnaam.github.io/bestellapp/</code> in Safari (iPhone) of Chrome (Android).</p>
+          <h4>Open de app in Safari</h4>
+          <p>Tik in de adresbalk en ga naar <code>https://pbellem.github.io/bestellapp/</code> (of de URL van jullie installatie).</p>
         </div>
       </div>
 
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-content">
-          <h4>Eerste keer: log in als admin</h4>
-          <p>Vul je naam in, type PIN <code>9999</code>, ga naar <em>Firebase synchronisatie</em> en plak de URL. Klik <em>Opslaan en verbinden</em>. Daarna verschijnen alle gedeelde instellingen automatisch.</p>
+          <h4>Tik op het Deel-icoontje</h4>
+          <p>Onderaan in het midden van het scherm staat het deel-icoontje: een vierkantje met een pijl die omhoog wijst. Tik daarop.</p>
         </div>
       </div>
 
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-content">
-          <h4>Toevoegen aan startscherm</h4>
-          <ul>
-            <li><strong>iPhone:</strong> deel-icoontje (vierkantje met pijl) → "Zet op beginscherm"</li>
-            <li><strong>Android:</strong> drie puntjes rechtsboven → "App installeren"</li>
-          </ul>
+          <h4>Kies "Zet op beginscherm"</h4>
+          <p>Scroll in het deel-menu naar beneden tot je <strong>Zet op beginscherm</strong> ziet (in het Engels: <em>Add to Home Screen</em>). Tik erop.</p>
         </div>
       </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Bevestig de naam</h4>
+          <p>Pas eventueel de naam aan (bv. "Restaurant") en tik <strong>Voeg toe</strong> rechtsboven. De app verschijnt nu als blauw icoon met vork en mes op je startscherm.</p>
+        </div>
+      </div>
+
+      <h3 id="g-install-android">Android — Chrome</h3>
+
+      <p>Op Android werkt het in Chrome, Edge, Samsung Internet en de meeste andere browsers. Hieronder de stappen voor Chrome (de meest voorkomende):</p>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Open de app in Chrome</h4>
+          <p>Tik in de adresbalk en ga naar <code>https://pbellem.github.io/bestellapp/</code></p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Tik op het menu (drie puntjes)</h4>
+          <p>Tik rechtsboven op de drie puntjes (<strong>⋮</strong>) om het Chrome-menu te openen. Bij sommige toestellen verschijnt automatisch een banner onderaan met "App installeren" — kan je daarop tikken in plaats van het menu.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Kies "App installeren"</h4>
+          <p>In het menu vind je <strong>App installeren</strong> of <strong>Installeren</strong> (afhankelijk van de Chrome-versie). Tik erop.</p>
+          <p>Als je deze optie niet ziet, tik dan op <strong>Toevoegen aan startscherm</strong> — die optie heeft Chrome altijd.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Bevestig</h4>
+          <p>Tik op <strong>Installeren</strong> in het pop-up venster. De app verschijnt op je startscherm en in de app-lade, en opent voortaan zonder browserbalk.</p>
+        </div>
+      </div>
+
+      <h3>Werkt het niet?</h3>
+      <ul>
+        <li><strong>iPhone:</strong> zorg dat je Safari gebruikt en <strong>niet</strong> Chrome of Firefox</li>
+        <li><strong>Android:</strong> als de optie niet verschijnt, ververs eerst de pagina en probeer opnieuw — de service worker moet eerst geregistreerd zijn</li>
+        <li>Na de installatie kan je inloggen met je naam en PIN — alle synchronisatie werkt zoals in de browser</li>
+        <li>De geïnstalleerde app heeft altijd internet nodig om bestellingen te versturen</li>
+      </ul>
 
       <h2 id="g-roles">Rollen en URLs</h2>
       <p>Verschillende toestellen hebben verschillende rollen. Hieronder een overzicht:</p>
