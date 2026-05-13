@@ -54,7 +54,11 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
 .qty-ctrl{display:flex;align-items:center;gap:6px}
 .qbtn{width:30px;height:30px;border-radius:50%;border:1.5px solid #d1d5db;background:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .qbtn:active{background:#f0f0f0}
-.menu-cat{margin-bottom:20px}
+.cat-tabs-bar{display:flex;gap:6px;overflow-x:auto;padding:8px 4px;background:#f5f5f5;position:sticky;top:0;z-index:5;margin:-16px -16px 12px -16px;padding-left:16px;padding-right:16px;border-bottom:1px solid #e5e5e5}
+.cat-tab-btn{padding:8px 14px;border-radius:20px;background:#fff;border:1.5px solid #e5e5e5;color:#555;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.cat-tab-btn:active{transform:scale(.96)}
+.cat-tab-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+.menu-cat{margin-bottom:20px;scroll-margin-top:140px}
 .menu-cat h3{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
 .mitem{display:flex;align-items:center;background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e5e5e5;gap:10px}
 .add-btn{width:36px;height:36px;border-radius:50%;background:#2563eb;color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -133,7 +137,7 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
       <button class="pin-btn" onclick="pp('0')">0</button>
       <button class="pin-btn" onclick="pd()" style="font-size:14px">⌫</button>
     </div>
-    <div style="margin-top:16px;font-size:12px;color:#aaa;text-align:center">Bediening: 1234 &nbsp;|&nbsp; Admin: 9999</div>
+    <div style="margin-top:16px;font-size:12px;color:#aaa;text-align:center">Bediening: 1234</div>
   </div>
 </div>
 
@@ -396,6 +400,10 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
 </div>
 
 <script>
+// ⚠️ FIREBASE URL — hier instellen vóór deployen op GitHub Pages
+// Vul je Firebase Realtime Database URL in tussen de aanhalingstekens:
+var FIREBASE_URL = 'https://bestelappolvlombeek-default-rtdb.europe-west1.firebasedatabase.app';
+
 var PLABELS = {bar:'Bar', kitchen:'Keuken', cold:'Koude keuken', bill:'Kassa'};
 var CAT_COLORS = [
   {id:'blue', bg:'#dbeafe', text:'#1d4ed8', label:'Blauw'},
@@ -459,6 +467,8 @@ var state={
 function saveLocal(){try{localStorage.setItem('pr4',JSON.stringify(state));}catch(e){}}
 function loadLocal(){try{var s=localStorage.getItem('pr4');if(s)state=JSON.parse(s);}catch(e){}}
 loadLocal();
+// hardcoded Firebase URL overschrijft altijd de lokaal opgeslagen waarde
+if(FIREBASE_URL) state.fbUrl=FIREBASE_URL;
 
 var settingsLoadedFromFb = false;
 
@@ -641,14 +651,18 @@ function pp(d){
     var name=document.getElementById('login-name').value.trim();
     var match=state.staff.find(function(s){return s.pin===currentPin;});
     if(match){
-      if(!name&&!match.isAdmin){document.getElementById('pin-err').textContent='Vul uw naam in.';currentPin='';updPin();return;}
-      currentWaiter=name||match.name; currentRole=match.isAdmin?'admin':'staff';
+      if(match.isAdmin){
+        document.getElementById('pin-err').textContent='Admin gebruikt admin.html';
+        currentPin='';updPin();return;
+      }
+      if(!name){document.getElementById('pin-err').textContent='Vul uw naam in.';currentPin='';updPin();return;}
+      currentWaiter=name;
       currentPin='';updPin();
-      // Start polling als Firebase URL is ingesteld
       if(state.fbUrl) initFirebase(state.fbUrl);
-      if(currentRole==='admin') go('s-admin');
-      else go('s-orders');
-    } else if(currentPin.length>=6){document.getElementById('pin-err').textContent='Onjuiste PIN.';currentPin='';updPin();}
+      go('s-orders');
+    } else if(currentPin.length>=6){
+      document.getElementById('pin-err').textContent='Onjuiste PIN.';currentPin='';updPin();
+    }
   }
 }
 function pd(){currentPin=currentPin.slice(0,-1);updPin();document.getElementById('pin-err').textContent='';}
@@ -747,12 +761,20 @@ function addToOrder(table,name){currentOrder={table:table,name:name};basket={};r
 function renderMenuScreen(){
   document.getElementById('menu-title').textContent='Tafel '+currentOrder.table+' — '+currentOrder.name;
   renderBasket();
+  // Categorie tab-balk bovenaan
+  var tabHtml='<div class="cat-tabs-bar" id="cat-tabs-bar">';
+  state.categories.forEach(function(cat,idx){
+    var items=state.menu.filter(function(i){return i.cat===cat.id;});
+    if(!items.length) return;
+    tabHtml+='<button class="cat-tab-btn'+(idx===0?' active':'')+'" data-cat="'+cat.id+'" onclick="scrollToCat(\''+esc(cat.id)+'\')">'+cat.name+'</button>';
+  });
+  tabHtml+='</div>';
   var html='';
   state.categories.forEach(function(cat){
     var items=state.menu.filter(function(i){return i.cat===cat.id;});
     if(!items.length) return;
     var col=catColor(cat.id);
-    html+='<div class="menu-cat"><h3 style="color:'+col.text+'">'+cat.name+'</h3>';
+    html+='<div class="menu-cat" id="cat-section-'+cat.id+'"><h3 style="color:'+col.text+'">'+cat.name+'</h3>';
     items.forEach(function(item){
       var vsub=(item.vars&&item.vars.length)?' <span style="color:#aaa;font-size:11px">· '+item.vars.join(', ')+'</span>':'';
       html+='<div class="mitem"><div style="flex:1"><div style="font-size:15px;font-weight:500">'+item.name+'</div>';
@@ -762,11 +784,11 @@ function renderMenuScreen(){
     });
     html+='</div>';
   });
-  // items with unknown/deleted category
+  // items zonder categorie
   var knownCats=state.categories.map(function(c){return c.id;});
   var orphans=state.menu.filter(function(i){return knownCats.indexOf(i.cat)===-1;});
   if(orphans.length){
-    html+='<div class="menu-cat"><h3>Overige</h3>';
+    html+='<div class="menu-cat" id="cat-section-overige"><h3>Overige</h3>';
     orphans.forEach(function(item){
       html+='<div class="mitem"><div style="flex:1"><div style="font-size:15px;font-weight:500">'+item.name+'</div>';
       html+='<div style="font-size:13px;color:#555">€'+item.price.toFixed(2)+'</div></div>';
@@ -775,7 +797,18 @@ function renderMenuScreen(){
     });
     html+='</div>';
   }
-  document.getElementById('menu-items').innerHTML=html;
+  document.getElementById('menu-items').innerHTML=tabHtml+html;
+}
+
+function scrollToCat(catId){
+  var target=document.getElementById('cat-section-'+catId);
+  if(target){
+    target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  // update actieve tab
+  document.querySelectorAll('.cat-tab-btn').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-cat')===catId);
+  });
 }
 
 function openItemOpts(id){
