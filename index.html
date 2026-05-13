@@ -1,4 +1,33 @@
-<!DOCTYPE html>
+<!-- NIEUW ORDER : keuzescherm -->
+<div id="s-new-choice" class="screen">
+  <div class="header">
+    <span class="back" onclick="go('s-orders')">‹</span>
+    <h1>Bestelling</h1>
+  </div>
+  <div class="content">
+    <button class="btn btn-primary" style="padding:18px;font-size:16px;margin-bottom:12px" onclick="chooseNewOrder()">+ Nieuwe rekening openen</button>
+    <button class="btn btn-secondary" style="padding:18px;font-size:16px" onclick="chooseExistingOrder()">📋 Bestaande openstaande rekening</button>
+    <div id="choice-open-count" style="font-size:13px;color:#888;text-align:center;margin-top:14px"></div>
+  </div>
+</div>
+
+<!-- NIEUW ORDER -->
+<div id="s-new-order" class="screen">
+  <div class="header">
+    <span class="back" onclick="go('s-orders')">‹</span>
+    <h1>Nieuw order</h1>
+  </div>
+  <div class="content">
+    <div id="open-orders-section" style="margin-bottom:16px"></div>
+    <div class="card">
+      <label>Tafel nummer</label>
+      <select class="inp" id="new-table"></select>
+      <label>Naam klant</label>
+      <input type="text" class="inp" id="new-name" placeholder="bv. Familie Janssen">
+    </div>
+    <button class="btn btn-primary" onclick="startOrder()">Doorgaan naar menu →</button>
+  </div>
+</div><!DOCTYPE html>
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
@@ -765,10 +794,65 @@ function renderDetail(table,name){
 
 // ── NEW ORDER ─────────────────────────────────────────────
 function goNewOrder(){
+  // Open keuzescherm
+  var openCount=state.orders.filter(function(o){return !o.paid;}).reduce(function(map,o){map[o.table+'__'+o.name]=true;return map;},{});
+  var n=Object.keys(openCount).length;
+  document.getElementById('choice-open-count').textContent=n>0?n+' openstaande rekening'+(n===1?'':'en'):'Geen openstaande rekeningen';
+  go('s-new-choice');
+}
+
+function chooseNewOrder(){
   var sel=document.getElementById('new-table');
   sel.innerHTML='<option value="">— Kies tafel —</option>'+(state.tables||[]).map(function(t){return '<option value="'+t+'">Tafel '+t+'</option>';}).join('');
   document.getElementById('new-name').value='';
   go('s-new-order');
+}
+
+function chooseExistingOrder(){
+  renderOpenOrdersList();
+  go('s-open-orders');
+}
+
+function renderOpenOrdersList(){
+  var el=document.getElementById('open-orders-list');
+  var combos={};
+  state.orders.filter(function(o){return !o.paid;}).forEach(function(o){
+    var k=o.table+'__'+o.name;
+    if(!combos[k]) combos[k]={table:o.table,name:o.name,total:0,waiters:[]};
+    combos[k].total+=o.items.reduce(function(s,i){return s+i.price*i.qty;},0);
+    if(o.waiter && combos[k].waiters.indexOf(o.waiter)===-1) combos[k].waiters.push(o.waiter);
+  });
+  var arr=Object.values(combos);
+  arr.sort(function(a,b){
+    var ta=parseInt(a.table,10), tb=parseInt(b.table,10);
+    if(!isNaN(ta) && !isNaN(tb) && ta!==tb) return ta-tb;
+    if(String(a.table)!==String(b.table)) return String(a.table).localeCompare(String(b.table));
+    return a.name.localeCompare(b.name);
+  });
+  if(!arr.length){
+    el.innerHTML='<div class="empty"><div style="font-size:48px">📋</div><div>Geen openstaande rekeningen</div><button class="btn btn-primary" style="margin-top:16px" onclick="chooseNewOrder()">+ Nieuwe rekening openen</button></div>';
+    return;
+  }
+  var html='<div style="font-size:13px;color:#888;margin-bottom:12px">Tik om items toe te voegen:</div>';
+  arr.forEach(function(g){
+    var esc1=esc(String(g.table)), esc2=esc(g.name);
+    html+='<div class="tcard" onclick="addToOrderFromNew(\''+esc1+'\',\''+esc2+'\')">';
+    html+='<div class="tavatar">'+initials(g.name)+'</div>';
+    html+='<div style="flex:1"><div class="table-name" style="font-weight:600">Tafel '+g.table+' — '+g.name+'</div>';
+    html+='<div class="table-meta" style="font-size:12px;color:#888;margin-top:2px">€'+g.total.toFixed(2);
+    if(g.waiters.length) html+=' · 👤 '+g.waiters.join(', ');
+    html+='</div></div>';
+    html+='<div style="color:#2563eb;font-size:22px">›</div></div>';
+  });
+  el.innerHTML=html;
+}
+
+function addToOrderFromNew(table, name){
+  currentOrder={table:table, name:name};
+  basket={};
+  activeCatFilter=null;
+  renderMenuScreen();
+  go('s-menu');
 }
 function startOrder(){
   var table=document.getElementById('new-table').value.trim();
