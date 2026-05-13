@@ -815,6 +815,11 @@ function chooseExistingOrder(){
 
 function renderOpenOrdersList(){
   var el=document.getElementById('open-orders-list');
+  if(!el){
+    console.warn('open-orders-list element niet gevonden — vermoedelijk oude cache. Probeer hard refresh (Ctrl+Shift+R).');
+    notify('Pagina verouderd, ververs (Ctrl+Shift+R)');
+    return;
+  }
   var combos={};
   state.orders.filter(function(o){return !o.paid;}).forEach(function(o){
     var k=o.table+'__'+o.name;
