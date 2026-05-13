@@ -779,21 +779,27 @@ function startOrder(){
 function addToOrder(table,name){currentOrder={table:table,name:name};basket={};renderMenuScreen();go('s-menu');}
 
 // ── MENU SCREEN ───────────────────────────────────────────
+var activeCatFilter = null;
+
 function renderMenuScreen(){
   document.getElementById('menu-title').textContent='Tafel '+currentOrder.table+' — '+currentOrder.name;
   renderBasket();
-  // Categorie tab-balk bovenaan (buiten scrollable content)
+  // Categorie filter-pills bovenaan (buiten scrollable content)
   var tabHtml='<div class="cat-tabs-bar" id="cat-tabs-bar">';
-  state.categories.forEach(function(cat,idx){
+  state.categories.forEach(function(cat){
     var items=state.menu.filter(function(i){return i.cat===cat.id;});
     if(!items.length) return;
-    tabHtml+='<button class="cat-tab-btn'+(idx===0?' active':'')+'" data-cat="'+cat.id+'" onclick="scrollToCat(\''+esc(cat.id)+'\')">'+cat.name+'</button>';
+    var col=catColor(cat.id);
+    var isActive=activeCatFilter===cat.id;
+    var styleAttr=isActive?' style="background:'+col.text+';color:#fff"':'';
+    tabHtml+='<button class="cat-tab-btn'+(isActive?' active':'')+'" data-cat="'+cat.id+'" onclick="toggleCatFilter(\''+esc(cat.id)+'\')"'+styleAttr+'>'+cat.name+'</button>';
   });
   tabHtml+='</div>';
   document.getElementById('menu-cat-tabs').innerHTML=tabHtml;
 
   var html='';
   state.categories.forEach(function(cat){
+    if(activeCatFilter && activeCatFilter!==cat.id) return;
     var items=state.menu.filter(function(i){return i.cat===cat.id;});
     if(!items.length) return;
     var col=catColor(cat.id);
@@ -807,48 +813,36 @@ function renderMenuScreen(){
     });
     html+='</div>';
   });
-  // items zonder categorie
-  var knownCats=state.categories.map(function(c){return c.id;});
-  var orphans=state.menu.filter(function(i){return knownCats.indexOf(i.cat)===-1;});
-  if(orphans.length){
-    html+='<div class="menu-cat" id="cat-section-overige"><h3>Overige</h3>';
-    orphans.forEach(function(item){
-      html+='<div class="mitem"><div style="flex:1"><div style="font-size:15px;font-weight:500">'+item.name+'</div>';
-      html+='<div style="font-size:13px;color:#555">€'+item.price.toFixed(2)+'</div></div>';
-      html+='<span id="bc-'+item.id+'" style="font-weight:700;color:#2563eb;min-width:20px;text-align:center"></span>';
-      html+='<button class="add-btn" onclick="openItemOpts('+item.id+')">+</button></div>';
-    });
-    html+='</div>';
+  // items zonder categorie (alleen tonen als geen filter actief)
+  if(!activeCatFilter){
+    var knownCats=state.categories.map(function(c){return c.id;});
+    var orphans=state.menu.filter(function(i){return knownCats.indexOf(i.cat)===-1;});
+    if(orphans.length){
+      html+='<div class="menu-cat" id="cat-section-overige"><h3>Overige</h3>';
+      orphans.forEach(function(item){
+        html+='<div class="mitem"><div style="flex:1"><div style="font-size:15px;font-weight:500">'+item.name+'</div>';
+        html+='<div style="font-size:13px;color:#555">€'+item.price.toFixed(2)+'</div></div>';
+        html+='<span id="bc-'+item.id+'" style="font-weight:700;color:#2563eb;min-width:20px;text-align:center"></span>';
+        html+='<button class="add-btn" onclick="openItemOpts('+item.id+')">+</button></div>';
+      });
+      html+='</div>';
+    }
   }
   document.getElementById('menu-items').innerHTML=html;
+  // herbouw basket counters
+  Object.keys(basket).forEach(function(k){updCount(basket[k].itemId);});
+  // scroll naar boven bij filter wissel
+  var container=document.querySelector('#s-menu .content');
+  if(container) container.scrollTop=0;
 }
 
-function scrollToCat(catId){
-  var target=document.getElementById('cat-section-'+catId);
-  if(!target) return;
-  // Vind de scroll container (.content binnen #s-menu)
-  var container=document.querySelector('#s-menu .content');
-  if(container){
-    var containerTop=container.getBoundingClientRect().top;
-    var targetTop=target.getBoundingClientRect().top;
-    var offset=targetTop-containerTop+container.scrollTop-8;
-    container.scrollTo({top:offset, behavior:'smooth'});
+function toggleCatFilter(catId){
+  if(activeCatFilter===catId){
+    activeCatFilter=null;  // dezelfde categorie nogmaals = filter wissen
   } else {
-    target.scrollIntoView({behavior:'smooth',block:'start'});
+    activeCatFilter=catId;
   }
-  // update actieve tab met de categorie-kleur
-  var col=catColor(catId);
-  document.querySelectorAll('.cat-tab-btn').forEach(function(b){
-    var isActive=b.getAttribute('data-cat')===catId;
-    b.classList.toggle('active', isActive);
-    if(isActive){
-      b.style.background=col.text;
-      b.style.color='#fff';
-    } else {
-      b.style.background='';
-      b.style.color='';
-    }
-  });
+  renderMenuScreen();
 }
 
 function openItemOpts(id){
