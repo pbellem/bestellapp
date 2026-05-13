@@ -54,13 +54,12 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
 .qty-ctrl{display:flex;align-items:center;gap:6px}
 .qbtn{width:30px;height:30px;border-radius:50%;border:1.5px solid #d1d5db;background:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .qbtn:active{background:#f0f0f0}
-.cat-tabs-bar{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:20;width:calc(100% - 24px);max-width:456px;border-radius:24px;box-shadow:0 4px 16px rgba(0,0,0,.12),0 1px 4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.05)}
+.cat-tabs-bar{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:#fff;border-bottom:1px solid #e5e5e5;box-shadow:0 2px 6px rgba(0,0,0,.05);position:sticky;top:0;z-index:9}
 .cat-tabs-bar::-webkit-scrollbar{display:none}
-.cat-tab-btn{padding:8px 14px;border-radius:16px;background:transparent;border:none;color:#555;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0;font-family:inherit}
+.cat-tab-btn{padding:8px 14px;border-radius:16px;background:#f1f5f9;border:none;color:#555;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0;font-family:inherit}
 .cat-tab-btn:active{transform:scale(.94)}
 .cat-tab-btn.active{background:#2563eb;color:#fff}
-.menu-cat{margin-bottom:20px;scroll-margin-top:130px}
-.menu-cat:first-of-type{margin-top:64px}
+.menu-cat{margin-bottom:20px;scroll-margin-top:8px}
 .menu-cat h3{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
 .mitem{display:flex;align-items:center;background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e5e5e5;gap:10px}
 .add-btn{width:36px;height:36px;border-radius:50%;background:#2563eb;color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -203,6 +202,7 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
     <h1 id="menu-title">Bestelling</h1>
     <button class="btn btn-success btn-sm" onclick="submitOrder()">Verzend</button>
   </div>
+  <div id="menu-cat-tabs"></div>
   <div class="content">
     <div id="basket-wrap" style="margin-bottom:16px"></div>
     <div id="menu-items"></div>
@@ -782,7 +782,7 @@ function addToOrder(table,name){currentOrder={table:table,name:name};basket={};r
 function renderMenuScreen(){
   document.getElementById('menu-title').textContent='Tafel '+currentOrder.table+' — '+currentOrder.name;
   renderBasket();
-  // Categorie tab-balk bovenaan
+  // Categorie tab-balk bovenaan (buiten scrollable content)
   var tabHtml='<div class="cat-tabs-bar" id="cat-tabs-bar">';
   state.categories.forEach(function(cat,idx){
     var items=state.menu.filter(function(i){return i.cat===cat.id;});
@@ -790,6 +790,8 @@ function renderMenuScreen(){
     tabHtml+='<button class="cat-tab-btn'+(idx===0?' active':'')+'" data-cat="'+cat.id+'" onclick="scrollToCat(\''+esc(cat.id)+'\')">'+cat.name+'</button>';
   });
   tabHtml+='</div>';
+  document.getElementById('menu-cat-tabs').innerHTML=tabHtml;
+
   var html='';
   state.categories.forEach(function(cat){
     var items=state.menu.filter(function(i){return i.cat===cat.id;});
@@ -818,12 +820,20 @@ function renderMenuScreen(){
     });
     html+='</div>';
   }
-  document.getElementById('menu-items').innerHTML=tabHtml+html;
+  document.getElementById('menu-items').innerHTML=html;
 }
 
 function scrollToCat(catId){
   var target=document.getElementById('cat-section-'+catId);
-  if(target){
+  if(!target) return;
+  // Vind de scroll container (.content binnen #s-menu)
+  var container=document.querySelector('#s-menu .content');
+  if(container){
+    var containerTop=container.getBoundingClientRect().top;
+    var targetTop=target.getBoundingClientRect().top;
+    var offset=targetTop-containerTop+container.scrollTop-8;
+    container.scrollTo({top:offset, behavior:'smooth'});
+  } else {
     target.scrollIntoView({behavior:'smooth',block:'start'});
   }
   // update actieve tab met de categorie-kleur
