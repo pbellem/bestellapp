@@ -89,10 +89,12 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2
 /* NOTIF */
 .notif{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-20px);background:#16a34a;color:#fff;padding:12px 24px;border-radius:24px;font-size:15px;font-weight:700;z-index:300;opacity:0;transition:all .3s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.build-tag{position:fixed;bottom:6px;right:8px;font-size:10px;color:#94a3b8;background:rgba(0,0,0,.4);padding:3px 8px;border-radius:8px;pointer-events:none;z-index:1;font-family:monospace}
 </style>
 </head>
 <body>
 <div id="notif" class="notif"></div>
+<div class="build-tag">v2026.05.13.1</div>
 
 <!-- SETUP SCHERM -->
 <div id="setup-screen" class="setup" style="display:none">
