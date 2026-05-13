@@ -60,7 +60,7 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
 .cat-tab-btn:active{transform:scale(.94)}
 .cat-tab-btn.active{background:#2563eb;color:#fff}
 .menu-cat{margin-bottom:20px;scroll-margin-top:130px}
-.menu-cat:first-of-type{margin-top:54px}
+.menu-cat:first-of-type{margin-top:64px}
 .menu-cat h3{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
 .mitem{display:flex;align-items:center;background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e5e5e5;gap:10px}
 .add-btn{width:36px;height:36px;border-radius:50%;background:#2563eb;color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -140,6 +140,16 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
       <button class="pin-btn" onclick="pd()" style="font-size:14px">⌫</button>
     </div>
     <div style="margin-top:16px;font-size:12px;color:#aaa;text-align:center">Bediening: 1234</div>
+
+    <details style="margin-top:24px;font-size:12px;color:#888">
+      <summary style="cursor:pointer;text-align:center;padding:6px;color:#2563eb">⚙ Geavanceerd · Firebase verbinding</summary>
+      <div style="margin-top:10px;padding:12px;background:#fafafa;border-radius:8px;border:1px solid #e5e5e5">
+        <label style="margin-bottom:4px;display:block">Database URL</label>
+        <input type="text" class="inp" id="login-fb-url" placeholder="https://...firebasedatabase.app" style="font-size:12px;margin-bottom:8px">
+        <button class="btn btn-secondary btn-sm" onclick="saveLoginFbUrl()" style="width:100%">Opslaan &amp; verbinden</button>
+        <div style="font-size:11px;color:#aaa;margin-top:8px;line-height:1.4">Alleen aanpassen als de standaard verbinding niet werkt.</div>
+      </div>
+    </details>
   </div>
 </div>
 
@@ -646,6 +656,15 @@ function genId(){return Date.now().toString(36)+Math.random().toString(36).slice
 function initials(name){return (name||'?').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();}
 
 // ── PIN ───────────────────────────────────────────────────
+function saveLoginFbUrl(){
+  var url=document.getElementById('login-fb-url').value.trim().replace(/\/$/,'');
+  if(!url){notify('Vul een URL in');return;}
+  state.fbUrl=url;
+  saveLocal();
+  initFirebase(url);
+  notify('Verbinding gemaakt — log in om verder te gaan');
+}
+
 function pp(d){
   if(currentPin.length>=6) return;
   currentPin+=d; updPin();
@@ -778,11 +797,11 @@ function renderMenuScreen(){
     var col=catColor(cat.id);
     html+='<div class="menu-cat" id="cat-section-'+cat.id+'"><h3 style="color:'+col.text+'">'+cat.name+'</h3>';
     items.forEach(function(item){
-      var vsub=(item.vars&&item.vars.length)?' <span style="color:#aaa;font-size:11px">· '+item.vars.join(', ')+'</span>':'';
-      html+='<div class="mitem"><div style="flex:1"><div style="font-size:15px;font-weight:500">'+item.name+'</div>';
-      html+='<div style="font-size:13px;color:#555">€'+item.price.toFixed(2)+vsub+'</div></div>';
-      html+='<span id="bc-'+item.id+'" style="font-weight:700;color:#2563eb;min-width:20px;text-align:center"></span>';
-      html+='<button class="add-btn" onclick="openItemOpts('+item.id+')">+</button></div>';
+      var vsub=(item.vars&&item.vars.length)?' <span style="color:'+col.text+';opacity:.7;font-size:11px">· '+item.vars.join(', ')+'</span>':'';
+      html+='<div class="mitem" style="background:'+col.bg+';border-color:'+col.bg+'"><div style="flex:1"><div style="font-size:15px;font-weight:500;color:'+col.text+'">'+item.name+'</div>';
+      html+='<div style="font-size:13px;color:'+col.text+';opacity:.85">€'+item.price.toFixed(2)+vsub+'</div></div>';
+      html+='<span id="bc-'+item.id+'" style="font-weight:700;color:'+col.text+';min-width:20px;text-align:center"></span>';
+      html+='<button class="add-btn" onclick="openItemOpts('+item.id+')" style="background:'+col.text+'">+</button></div>';
     });
     html+='</div>';
   });
@@ -807,9 +826,18 @@ function scrollToCat(catId){
   if(target){
     target.scrollIntoView({behavior:'smooth',block:'start'});
   }
-  // update actieve tab
+  // update actieve tab met de categorie-kleur
+  var col=catColor(catId);
   document.querySelectorAll('.cat-tab-btn').forEach(function(b){
-    b.classList.toggle('active', b.getAttribute('data-cat')===catId);
+    var isActive=b.getAttribute('data-cat')===catId;
+    b.classList.toggle('active', isActive);
+    if(isActive){
+      b.style.background=col.text;
+      b.style.color='#fff';
+    } else {
+      b.style.background='';
+      b.style.color='';
+    }
   });
 }
 
@@ -1363,6 +1391,11 @@ function saveFbUrl(){
 
 // Init bij start: als FB URL al opgeslagen, eerst settings ophalen, dan polling starten
 if(state.fbUrl){
+  // Vul login-veld in met huidige URL
+  setTimeout(function(){
+    var el=document.getElementById('login-fb-url');
+    if(el) el.value=state.fbUrl;
+  },50);
   fetchSettings(function(){
     initFirebase(state.fbUrl);
   });
