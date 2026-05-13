@@ -1,4 +1,4 @@
-const CACHE = 'popup-restaurant-v2';
+const CACHE = 'popup-restaurant-v3';
 // Alleen de hoofdapp cachen (index.html + manifest)
 // admin.html, tickets.html en station.html worden NOOIT gecached
 // zodat updates altijd direct zichtbaar zijn
@@ -16,6 +16,12 @@ self.addEventListener('install', function(e) {
     })
   );
   self.skipWaiting();
+});
+
+self.addEventListener('message', function(e){
+  if(e.data && e.data.type === 'SKIP_WAITING'){
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', function(e) {
