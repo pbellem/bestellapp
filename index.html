@@ -149,7 +149,7 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
 <body>
 <div id="notif" class="notif"></div>
 
-<!-- PIN + NAAM -->
+<!-- LOGIN -->
 <div id="s-pin" class="screen active">
   <div class="header"><h1>Popup Restaurant</h1></div>
   <div class="content">
@@ -157,33 +157,12 @@ label{font-size:13px;color:#555;margin-bottom:4px;display:block}
       <div style="font-size:32px;margin-bottom:6px">🍽️</div>
       <div style="font-size:15px;color:#555">Aanmelden</div>
     </div>
-    <label>Uw naam</label>
-    <input type="text" class="inp" id="login-name" placeholder="bv. Sarah">
-    <label>PIN-code</label>
-    <div class="pin-display" id="pin-display">
-      <div class="pin-dot" id="pd-0"></div>
-      <div class="pin-dot" id="pd-1"></div>
-      <div class="pin-dot" id="pd-2"></div>
-      <div class="pin-dot" id="pd-3"></div>
-      <div class="pin-dot" id="pd-4"></div>
-      <div class="pin-dot" id="pd-5"></div>
-    </div>
-    <div style="font-size:12px;color:#dc2626;text-align:center;min-height:18px;margin-bottom:6px" id="pin-err"></div>
-    <div class="pin-grid">
-      <button class="pin-btn" onclick="pp('1')">1</button>
-      <button class="pin-btn" onclick="pp('2')">2</button>
-      <button class="pin-btn" onclick="pp('3')">3</button>
-      <button class="pin-btn" onclick="pp('4')">4</button>
-      <button class="pin-btn" onclick="pp('5')">5</button>
-      <button class="pin-btn" onclick="pp('6')">6</button>
-      <button class="pin-btn" onclick="pp('7')">7</button>
-      <button class="pin-btn" onclick="pp('8')">8</button>
-      <button class="pin-btn" onclick="pp('9')">9</button>
-      <button class="pin-btn" onclick="pc()" style="font-size:14px;color:#888">Wis</button>
-      <button class="pin-btn" onclick="pp('0')">0</button>
-      <button class="pin-btn" onclick="pd()" style="font-size:14px">⌫</button>
-    </div>
-    <div style="margin-top:16px;font-size:12px;color:#aaa;text-align:center">Bediening: 1234</div>
+    <label>Selecteer uw naam</label>
+    <select class="inp" id="login-staff-select" onchange="onStaffChange()">
+      <option value="">— Kies uw naam —</option>
+    </select>
+    <div id="login-sync-info" style="font-size:12px;color:#888;text-align:center;margin:8px 0 16px"></div>
+    <button class="btn btn-primary" onclick="doLogin()" id="login-btn" disabled>Aanmelden</button>
 
     <details style="margin-top:24px;font-size:12px;color:#888">
       <summary style="cursor:pointer;text-align:center;padding:6px;color:#2563eb">⚙ Geavanceerd · Firebase verbinding</summary>
@@ -625,6 +604,7 @@ function startPolling(){
 function renderAfterSync(){
   var cur=document.querySelector('.screen.active');
   if(!cur) return;
+  if(cur.id==='s-pin') populateStaffSelect();
   if(cur.id==='s-admin'){
     renderAdminMenu();
     renderPrinters();
@@ -1498,17 +1478,16 @@ function saveFbUrl(){
   }
 }
 
-// Init bij start: als FB URL al opgeslagen, eerst settings ophalen, dan polling starten
+// Init bij start: als FB URL beschikbaar, start sync onmiddellijk
 if(state.fbUrl){
-  // Vul login-veld in met huidige URL
   setTimeout(function(){
     var el=document.getElementById('login-fb-url');
     if(el) el.value=state.fbUrl;
   },50);
-  fetchSettings(function(){
-    initFirebase(state.fbUrl);
-  });
+  initFirebase(state.fbUrl);
 }
+// Toon eerst lokale medewerkers, sync zal ze updaten
+setTimeout(populateStaffSelect, 50);
 </script>
 </body>
 </html>
