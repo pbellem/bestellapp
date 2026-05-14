@@ -101,6 +101,9 @@ tbody tr:hover td{background:#fafbfc}
 .status-partial{background:#fffbeb;color:#d97706}
 .status-served{background:#eff6ff;color:#2563eb}
 .status-paid{background:#f1f5f9;color:#64748b}
+.status-error{background:#fee2e2;color:#991b1b}
+.status-printed{background:#ecfdf5;color:#15803d}
+.status-pending{background:#fff7ed;color:#9a3412}
 
 /* ORDER LIST */
 .order-row{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:14px;transition:background .1s}
@@ -210,6 +213,7 @@ tbody tr:hover td{background:#fafbfc}
       <div class="kpi-grid">
         <div class="kpi"><span class="kpi-icon">📋</span><div class="kpi-label">Open tafels</div><div class="kpi-value" id="kpi-open">—</div></div>
         <div class="kpi"><span class="kpi-icon">⏳</span><div class="kpi-label">In wachtrij</div><div class="kpi-value" id="kpi-queue">—</div></div>
+        <div class="kpi" id="kpi-errors-card" style="display:none"><span class="kpi-icon">⚠️</span><div class="kpi-label" style="color:#991b1b">Print-fouten</div><div class="kpi-value" id="kpi-errors" style="color:#991b1b">—</div></div>
         <div class="kpi"><span class="kpi-icon">✓</span><div class="kpi-label">Geserveerd</div><div class="kpi-value" id="kpi-served">—</div></div>
         <div class="kpi"><span class="kpi-icon">💶</span><div class="kpi-label">Omzet vandaag</div><div class="kpi-value green" id="kpi-revenue">€—</div></div>
       </div>
@@ -728,10 +732,17 @@ function renderKpis(){
   var queue=allItems.filter(function(i){return !i.served;}).reduce(function(s,i){return s+i.qty;},0);
   var served=allItems.filter(function(i){return i.served;}).reduce(function(s,i){return s+i.qty;},0);
   var revenue=state.orders.filter(function(o){return o.paid;}).reduce(function(s,o){return s+o.items.reduce(function(ss,i){return ss+i.price*i.qty;},0);},0);
+  var errors=state.orders.filter(function(o){return !o.paid && o.printStatus==='error';}).length;
   document.getElementById('kpi-open').textContent=active.length;
   document.getElementById('kpi-queue').textContent=queue;
   document.getElementById('kpi-served').textContent=served;
   document.getElementById('kpi-revenue').textContent='€'+revenue.toFixed(2);
+  var errCard=document.getElementById('kpi-errors-card');
+  var errEl=document.getElementById('kpi-errors');
+  if(errCard && errEl){
+    if(errors>0){errCard.style.display='';errEl.textContent=errors;}
+    else{errCard.style.display='none';}
+  }
 }
 
 // ── ORDERS LIST ───────────────────────────────────────────
@@ -762,13 +773,21 @@ function renderOrdersList(){
     var anyServed=items.some(function(i){return i.served;});
     var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
     var waiters=[];g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
+    // print status: error > pending > printed
+    var hasError=g.orders.some(function(o){return o.printStatus==='error';});
+    var hasPending=g.orders.some(function(o){return !o.printStatus||o.printStatus==='pending';});
+    var allPrinted=g.orders.every(function(o){return o.printStatus==='printed';});
     var k=g.table+'__'+g.name;
     var status=allServed?'<span class="status status-served">✓ Geserveerd</span>':anyServed?'<span class="status status-partial">⏳ Bezig</span>':'<span class="status status-open">● Open</span>';
+    var printStatusHtml='';
+    if(hasError) printStatusHtml='<span class="status status-error" title="Printfout — klik voor details">⚠ Print-fout</span>';
+    else if(allPrinted) printStatusHtml='<span class="status status-printed">🖨 Gedrukt</span>';
+    else if(hasPending) printStatusHtml='<span class="status status-pending">🖨 Wachten...</span>';
     var sel=selectedGroupKey===k?' selected':'';
     html+='<div class="order-row'+sel+'" onclick="selectGroup(\''+esc(k)+'\')">';
     html+='<div class="order-avatar">'+initials(g.name)+'</div>';
     html+='<div class="order-info"><div class="order-title">Tafel '+g.table+' — '+g.name+'</div>';
-    html+='<div class="order-meta">'+status+'<span>€'+total.toFixed(2)+'</span>';
+    html+='<div class="order-meta">'+status+printStatusHtml+'<span>€'+total.toFixed(2)+'</span>';
     if(waiters.length) html+='<span class="waiter-tag">👤 '+waiters.join(', ')+'</span>';
     html+='</div></div></div>';
   });
@@ -816,6 +835,19 @@ function renderDetailPanel(){
   html+='<button class="btn btn-danger btn-sm" onclick="deleteGroup(\''+esc(table)+'\',\''+esc(name)+'\')">🗑 Verwijder</button>';
   html+='</div></div></div>';
   el.innerHTML=html;
+}
+
+function retryPrint(fbId){
+  if(!fbId) return;
+  var order=state.orders.find(function(o){return o.fbId===fbId;});
+  if(!order) return;
+  // Reset printStatus zodat de printserver opnieuw probeert
+  order.printStatus='pending';
+  order.printError='';
+  delete order.printAttempts;
+  if(state.fbUrl) fbPut('/orders/'+fbId,order);
+  notify('Print opnieuw aangevraagd');
+  renderAll();
 }
 
 function toggleItemServed(orderId, itemIdx){
