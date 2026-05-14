@@ -1,1493 +1,1639 @@
-<!-- NIEUW ORDER : keuzescherm -->
-<div id="s-new-choice" class="screen">
-  <div class="header">
-    <span class="back" onclick="go('s-orders')">‹</span>
-    <h1>Bestelling</h1>
-  </div>
-  <div class="content">
-    <button class="btn btn-primary" style="padding:18px;font-size:16px;margin-bottom:12px" onclick="chooseNewOrder()">+ Nieuwe rekening openen</button>
-    <button class="btn btn-secondary" style="padding:18px;font-size:16px" onclick="chooseExistingOrder()">📋 Bestaande openstaande rekening</button>
-    <div id="choice-open-count" style="font-size:13px;color:#888;text-align:center;margin-top:14px"></div>
-  </div>
-</div>
-
-<!-- NIEUW ORDER -->
-<div id="s-new-order" class="screen">
-  <div class="header">
-    <span class="back" onclick="go('s-orders')">‹</span>
-    <h1>Nieuw order</h1>
-  </div>
-  <div class="content">
-    <div id="open-orders-section" style="margin-bottom:16px"></div>
-    <div class="card">
-      <label>Tafel nummer</label>
-      <select class="inp" id="new-table"></select>
-      <label>Naam klant</label>
-      <input type="text" class="inp" id="new-name" placeholder="bv. Familie Janssen">
-    </div>
-    <button class="btn btn-primary" onclick="startOrder()">Doorgaan naar menu →</button>
-  </div>
-</div><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Popup Restaurant</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2563eb">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Restaurant">
-<link rel="apple-touch-icon" href="icon-192.png">
-<script>
-  if('serviceWorker' in navigator){
-    window.addEventListener('load', function(){
-      if(window.self === window.top){
-        navigator.serviceWorker.register('sw.js').then(function(reg){
-          console.log('[SW] Geregistreerd:', reg.scope);
-          // Forceer een update-check bij elke laad
-          reg.update();
-          // Als er een nieuwe service worker wacht, activeer en reload
-          if(reg.waiting){
-            reg.waiting.postMessage({type:'SKIP_WAITING'});
-          }
-          reg.addEventListener('updatefound', function(){
-            var newWorker = reg.installing;
-            if(newWorker){
-              newWorker.addEventListener('statechange', function(){
-                if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
-                  // Nieuwe versie klaar — herlaad pagina
-                  window.location.reload();
-                }
-              });
-            }
-          });
-        }).catch(function(e){
-          console.warn('[SW] Registratie mislukt:', e);
-        });
-      }
-    });
-  }
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Popup Restaurant — Admin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;color:#1a1a1a;max-width:480px;margin:0 auto;min-height:100vh}
-.screen{display:none;flex-direction:column;min-height:100vh}
-.screen.active{display:flex}
-.header{background:#fff;padding:14px 16px;border-bottom:1px solid #e5e5e5;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
-.header h1{font-size:17px;font-weight:600;flex:1}
-.back{font-size:22px;cursor:pointer;color:#555;padding:2px 6px}
-.content{flex:1;padding:16px;overflow-y:auto}
-.btn{display:block;width:100%;padding:14px;border-radius:10px;border:none;font-size:15px;font-weight:600;cursor:pointer;text-align:center}
-.btn-primary{background:#2563eb;color:#fff}
-.btn-secondary{background:#fff;color:#2563eb;border:1.5px solid #2563eb}
-.btn-danger{background:#dc2626;color:#fff}
-.btn-success{background:#16a34a;color:#fff}
-.btn-sm{padding:8px 14px;font-size:13px;width:auto;border-radius:8px}
-.btn:active{opacity:.75}
-.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;border:1px solid #e5e5e5}
-.inp{width:100%;padding:12px;border-radius:8px;border:1px solid #d1d5db;font-size:15px;background:#fff;margin-bottom:12px}
-.inp:focus{outline:none;border-color:#2563eb}
-label{font-size:13px;color:#555;margin-bottom:4px;display:block}
-.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:#e5e5e5;color:#555}
-.tab-bar{background:#fff;border-top:1px solid #e5e5e5;display:flex;padding:6px 0 10px;position:sticky;bottom:0}
-.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px;font-size:10px;color:#888}
-.tab.active{color:#2563eb}
-.tab-icon{font-size:20px}
-.oitem{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0}
-.oitem:last-child{border-bottom:none}
-.qty-ctrl{display:flex;align-items:center;gap:6px}
-.qbtn{width:30px;height:30px;border-radius:50%;border:1.5px solid #d1d5db;background:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.qbtn:active{background:#f0f0f0}
-.cat-tabs-bar{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:#fff;border-bottom:1px solid #e5e5e5;box-shadow:0 2px 6px rgba(0,0,0,.05);position:sticky;top:0;z-index:9}
-.cat-tabs-bar::-webkit-scrollbar{display:none}
-.cat-tab-btn{padding:8px 14px;border-radius:16px;background:#f1f5f9;border:none;color:#555;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;flex-shrink:0;font-family:inherit}
-.cat-tab-btn:active{transform:scale(.94)}
-.cat-tab-btn.active{background:#2563eb;color:#fff}
-.menu-cat{margin-bottom:20px;scroll-margin-top:8px}
-.menu-cat h3{font-size:13px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
-.mitem{display:flex;align-items:center;background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e5e5e5;gap:10px}
-.add-btn{width:36px;height:36px;border-radius:50%;background:#2563eb;color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.tcard{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;border:1px solid #e5e5e5;display:flex;align-items:center;gap:12px;cursor:pointer}
-.tcard:active{background:#f9fafb}
-.tavatar{width:44px;height:44px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#1d4ed8;flex-shrink:0}
-.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
-.pin-btn{padding:18px;font-size:22px;font-weight:600;border:1px solid #e5e5e5;border-radius:12px;background:#fff;cursor:pointer}
-.pin-btn:active{background:#f0f0f0}
-.pin-display{background:#f5f5f5 !important;border-radius:10px;padding:18px;text-align:center;min-height:64px;margin-bottom:8px;border:2px solid #2563eb;display:flex;align-items:center;justify-content:center;gap:12px}
-.pin-dot{width:16px;height:16px;border-radius:50%;background:#cbd5e1;transition:background .15s}
-.pin-dot.filled{background:#2563eb}
-.total-row{display:flex;justify-content:space-between;padding:6px 0}
-.total-row.grand{font-size:17px;font-weight:700;border-top:1px solid #e5e5e5;margin-top:6px;padding-top:10px}
-.notif{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
-.notif.show{opacity:1}
-.empty{text-align:center;padding:40px 20px;color:#888}
-.mbackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;align-items:flex-end}
-.mbackdrop.open{display:flex}
-.modal{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:90vh;overflow-y:auto}
-.modal h2{font-size:18px;font-weight:700;margin-bottom:16px}
-.var-btn{padding:8px 14px;border-radius:20px;border:1.5px solid #d1d5db;background:#fff;font-size:14px;cursor:pointer}
-.var-btn.sel{background:#2563eb;border-color:#2563eb;color:#fff}
-.cbtn{width:30px;height:30px;border-radius:50%;border:1.5px solid #d1d5db;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-.cbtn.has{border-color:#2563eb;background:#eff6ff}
-.pconf{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-.pconf input{flex:1;padding:8px;border-radius:6px;border:1px solid #d1d5db;font-size:13px}
-.schk{width:24px;height:24px;border-radius:50%;border:2px solid #d1d5db;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px}
-.schk.done{background:#16a34a;border-color:#16a34a;color:#fff}
-.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;background:#94a3b8}
+:root{
+  --bg:#f8fafc;
+  --surface:#ffffff;
+  --border:#e2e8f0;
+  --border-strong:#cbd5e1;
+  --text:#0f172a;
+  --text-muted:#64748b;
+  --primary:#2563eb;
+  --primary-soft:#eff6ff;
+  --success:#16a34a;
+  --warning:#f59e0b;
+  --danger:#dc2626;
+  --radius:10px;
+}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:#0f172a;color:#e2e8f0;padding:20px 0;display:flex;flex-direction:column}
+.sidebar-brand{padding:0 20px 24px;font-size:18px;font-weight:700;color:#fff;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1e293b;margin-bottom:16px}
+.nav{flex:1}
+.nav-item{padding:11px 20px;cursor:pointer;display:flex;align-items:center;gap:12px;font-size:14px;color:#94a3b8;border-left:3px solid transparent;transition:all .12s}
+.nav-item:hover{background:#1e293b;color:#fff}
+.nav-item.active{background:#1e293b;color:#fff;border-left-color:var(--primary)}
+.nav-icon{font-size:18px}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid #1e293b;font-size:12px;color:#64748b}
+.sync-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
 .sync-dot.ok{background:#22c55e}
 .sync-dot.err{background:#dc2626}
-.waiter-tag{font-size:11px;color:#888;background:#f3f4f6;padding:2px 7px;border-radius:10px;display:inline-block}
-.printer-chk{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f5f5f5;cursor:pointer}
-.printer-chk:last-child{border-bottom:none}
-.chkbox{width:22px;height:22px;border-radius:6px;border:2px solid #d1d5db;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
-.chkbox.on{background:#2563eb;border-color:#2563eb;color:#fff}
-.color-dot{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0}
-.cat-row{display:flex;align-items:center;background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e5e5e5;gap:10px}
+
+/* MAIN */
+.main{padding:24px 32px;overflow-y:auto;max-height:100vh}
+.page{display:none}
+.page.active{display:block}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.page-title{font-size:24px;font-weight:700}
+.page-subtitle{font-size:13px;color:var(--text-muted);margin-top:2px}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.kpi-label{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.kpi-value{font-size:28px;font-weight:700;color:var(--text)}
+.kpi-value.green{color:var(--success)}
+.kpi-icon{float:right;font-size:24px;opacity:.3}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#fafbfc}
+.card-title{font-size:14px;font-weight:600}
+.card-body{padding:18px}
+.card-body.dense{padding:0}
+
+/* SPLIT VIEW */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.split-3{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+
+/* BUTTONS */
+.btn{padding:8px 14px;border-radius:8px;border:1px solid transparent;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .12s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-secondary{background:var(--surface);color:var(--primary);border-color:var(--primary)}
+.btn-secondary:hover{background:var(--primary-soft)}
+.btn-ghost{background:transparent;color:var(--text-muted)}
+.btn-ghost:hover{background:#f1f5f9;color:var(--text)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#15803d}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-icon{padding:5px 8px;font-size:13px}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 14px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;background:#fafbfc;border-bottom:1px solid var(--border)}
+td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#fafbfc}
+.col-actions{text-align:right;width:120px;white-space:nowrap}
+
+/* INPUTS */
+.inp{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border-strong);font-size:14px;background:var(--surface);font-family:inherit}
+.inp:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--text-muted);font-weight:500;margin-bottom:4px}
+
+/* BADGE */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:#e5e5e5;color:#555}
+.status{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.status-open{background:#ecfdf5;color:#16a34a}
+.status-partial{background:#fffbeb;color:#d97706}
+.status-served{background:#eff6ff;color:#2563eb}
+.status-paid{background:#f1f5f9;color:#64748b}
+
+/* ORDER LIST */
+.order-row{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:14px;transition:background .1s}
+.order-row:hover{background:#fafbfc}
+.order-row:last-child{border-bottom:none}
+.order-row.selected{background:var(--primary-soft);border-left:3px solid var(--primary);padding-left:13px}
+.order-avatar{width:40px;height:40px;border-radius:50%;background:#dbeafe;color:#1d4ed8;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.order-info{flex:1;min-width:0}
+.order-title{font-weight:600;font-size:14px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.order-meta{font-size:12px;color:var(--text-muted);display:flex;gap:10px;align-items:center}
+.waiter-tag{font-size:10px;background:#f1f5f9;color:var(--text-muted);padding:2px 6px;border-radius:8px}
+
+/* DETAIL PANEL */
+.detail-empty{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.detail-empty .icon{font-size:48px;margin-bottom:12px;opacity:.4}
+
+/* ITEM ROW IN DETAIL */
+.detail-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.detail-item:last-child{border-bottom:none}
+.qty-pill{font-weight:700;font-size:13px;background:var(--primary-soft);color:var(--primary);padding:2px 8px;border-radius:6px;min-width:32px;text-align:center}
+.served-tick{cursor:pointer;width:22px;height:22px;border-radius:6px;border:2px solid var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;transition:all .1s}
+.served-tick:hover{border-color:var(--primary)}
+.served-tick.on{background:var(--success);border-color:var(--success);color:#fff}
+
+/* ROUND HEADER */
+.round-header{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;padding:6px 0;border-bottom:1px dashed var(--border);margin-bottom:6px}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;padding:24px;width:480px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2)}
+.modal-header{font-size:18px;font-weight:700;margin-bottom:18px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* COLOR PICKER */
+.color-grid{display:flex;gap:8px;flex-wrap:wrap}
+.color-swatch{width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .1s}
+.color-swatch:hover{transform:scale(1.1)}
+.color-swatch.sel{border-color:#0f172a}
+
+/* CHECKBOX LIST */
+.chk-list{border:1px solid var(--border);border-radius:8px;padding:4px 0;max-height:200px;overflow-y:auto}
+.chk-row{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;font-size:14px}
+.chk-row:hover{background:#fafbfc}
+.chkbox{width:18px;height:18px;border-radius:4px;border:2px solid var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;color:#fff}
+.chkbox.on{background:var(--primary);border-color:var(--primary)}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;gap:10px}
+.toggle{position:relative;width:42px;height:24px;background:var(--border-strong);border-radius:24px;cursor:pointer;transition:background .15s}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.toggle.on{background:var(--primary)}
+.toggle.on::after{left:20px}
+
+/* NOTIFICATION */
+.notif{position:fixed;top:16px;right:16px;background:var(--text);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:300;opacity:0;transition:opacity .25s,transform .25s;transform:translateY(-10px);pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.notif.show{opacity:1;transform:translateY(0)}
+
+/* COLOR DOT FOR CATEGORY */
+.cat-dot{width:14px;height:14px;border-radius:50%;display:inline-block;flex-shrink:0;border:2px solid currentColor}
+
+.empty-table{text-align:center;padding:32px;color:var(--text-muted);font-size:13px}
+.build-tag{position:fixed;bottom:6px;right:8px;font-size:10px;color:var(--text-muted);background:rgba(255,255,255,.85);padding:3px 8px;border-radius:8px;pointer-events:none;z-index:1;font-family:monospace;border:1px solid var(--border)}
+
+.filter-tabs{display:flex;gap:6px}
+.filter-tab{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-muted)}
+.filter-tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 </style>
 </head>
 <body>
 <div id="notif" class="notif"></div>
+<div class="build-tag">v2026.05.13.1</div>
 
-<!-- LOGIN -->
-<div id="s-pin" class="screen active">
-  <div class="header"><h1>Popup Restaurant</h1></div>
-  <div class="content">
-    <div class="card" style="text-align:center;margin-bottom:20px">
-      <div style="font-size:32px;margin-bottom:6px">🍽️</div>
-      <div style="font-size:15px;color:#555">Aanmelden</div>
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">🍽️ Restaurant</div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="p-orders" onclick="showPage('p-orders',this)"><span class="nav-icon">📋</span>Bestellingen</div>
+      <div class="nav-item" data-page="p-history" onclick="showPage('p-history',this)"><span class="nav-icon">🕐</span>Historiek</div>
+      <div class="nav-item" data-page="p-stats" onclick="showPage('p-stats',this)"><span class="nav-icon">📊</span>Statistieken</div>
+      <div class="nav-item" data-page="p-menu" onclick="showPage('p-menu',this)"><span class="nav-icon">🍽️</span>Menu</div>
+      <div class="nav-item" data-page="p-categories" onclick="showPage('p-categories',this)"><span class="nav-icon">🗂️</span>Categorieën</div>
+      <div class="nav-item" data-page="p-printers" onclick="showPage('p-printers',this)"><span class="nav-icon">🖨️</span>Printers</div>
+      <div class="nav-item" data-page="p-tables" onclick="showPage('p-tables',this)"><span class="nav-icon">🪑</span>Tafels</div>
+      <div class="nav-item" data-page="p-staff" onclick="showPage('p-staff',this)"><span class="nav-icon">👥</span>Medewerkers</div>
+      <div class="nav-item" data-page="p-settings" onclick="showPage('p-settings',this)"><span class="nav-icon">⚙️</span>Instellingen</div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sync-row"><span class="sync-dot" id="sync-dot"></span><span id="sync-txt">Niet verbonden</span></div>
+      <div id="last-sync" style="font-size:11px;color:#475569"></div>
     </div>
-    <label>Selecteer uw naam</label>
-    <select class="inp" id="login-staff-select" onchange="onStaffChange()">
-      <option value="">— Kies uw naam —</option>
-    </select>
-    <div id="login-sync-info" style="font-size:12px;color:#888;text-align:center;margin:8px 0 16px"></div>
-    <button class="btn btn-primary" onclick="doLogin()" id="login-btn" disabled>Aanmelden</button>
+  </aside>
 
-    <details style="margin-top:24px;font-size:12px;color:#888">
-      <summary style="cursor:pointer;text-align:center;padding:6px;color:#2563eb">⚙ Geavanceerd · Firebase verbinding</summary>
-      <div style="margin-top:10px;padding:12px;background:#fafafa;border-radius:8px;border:1px solid #e5e5e5">
-        <label style="margin-bottom:4px;display:block">Database URL</label>
-        <input type="text" class="inp" id="login-fb-url" placeholder="https://...firebasedatabase.app" style="font-size:12px;margin-bottom:8px">
-        <button class="btn btn-secondary btn-sm" onclick="saveLoginFbUrl()" style="width:100%">Opslaan &amp; verbinden</button>
-        <div style="font-size:11px;color:#aaa;margin-top:8px;line-height:1.4">Alleen aanpassen als de standaard verbinding niet werkt.</div>
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ORDERS -->
+    <section id="p-orders" class="page active">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Bestellingen</div>
+          <div class="page-subtitle">Live overzicht van alle actieve tafels</div>
+        </div>
       </div>
-    </details>
-  </div>
-</div>
 
-<!-- ORDERS -->
-<div id="s-orders" class="screen">
-  <div class="header">
-    <h1>Bestellingen</h1>
-    <span id="sync-indicator" style="font-size:12px;color:#888"><span class="sync-dot" id="sync-dot"></span><span id="sync-txt">...</span></span>
-    <button class="btn btn-primary btn-sm" onclick="goNewOrder()">+ Nieuw</button>
-  </div>
-  <div class="content" id="orders-list"></div>
-  <div class="tab-bar">
-    <div class="tab active"><div class="tab-icon">📋</div>Orders</div>
-    <div class="tab" onclick="go('s-history')"><div class="tab-icon">🕐</div>Historiek</div>
-    <div class="tab" onclick="go('s-menu-browse')"><div class="tab-icon">🍽️</div>Menu</div>
-    <div class="tab" onclick="logout()"><div class="tab-icon">🚪</div>Uitlog</div>
-  </div>
-</div>
-
-<!-- HISTORIEK -->
-<div id="s-history" class="screen">
-  <div class="header">
-    <span class="back" onclick="go('s-orders')">‹</span>
-    <h1>Historiek</h1>
-    <button class="btn btn-danger btn-sm" onclick="clearHistory()">Wis alles</button>
-  </div>
-  <div class="content" id="history-content"></div>
-</div>
-
-<!-- NIEUW ORDER -->
-<div id="s-new-order" class="screen">
-  <div class="header">
-    <span class="back" onclick="go('s-orders')">‹</span>
-    <h1>Nieuw order</h1>
-  </div>
-  <div class="content">
-    <div class="card">
-      <label>Tafel nummer</label>
-      <select class="inp" id="new-table"></select>
-      <label>Naam klant</label>
-      <input type="text" class="inp" id="new-name" placeholder="bv. Familie Janssen">
-    </div>
-    <button class="btn btn-primary" onclick="startOrder()">Doorgaan naar menu →</button>
-  </div>
-</div>
-
-<!-- MENU BESTELLEN -->
-<div id="s-menu" class="screen">
-  <div class="header">
-    <span class="back" onclick="go('s-orders')">‹</span>
-    <h1 id="menu-title">Bestelling</h1>
-    <button class="btn btn-success btn-sm" onclick="submitOrder()">Verzend</button>
-  </div>
-  <div id="menu-cat-tabs"></div>
-  <div class="content">
-    <div id="basket-wrap" style="margin-bottom:16px"></div>
-    <div id="menu-items"></div>
-  </div>
-</div>
-
-<!-- ORDER DETAIL -->
-<div id="s-order-detail" class="screen">
-  <div class="header">
-    <span class="back" onclick="go('s-orders')">‹</span>
-    <h1 id="detail-title">Order detail</h1>
-  </div>
-  <div class="content" id="detail-content"></div>
-</div>
-
-<!-- REKENING -->
-<div id="s-bill" class="screen">
-  <div class="header">
-    <span class="back" id="bill-back">‹</span>
-    <h1>Rekening</h1>
-  </div>
-  <div class="content" id="bill-content"></div>
-</div>
-
-<!-- MENU BROWSE -->
-<div id="s-menu-browse" class="screen">
-  <div class="header"><h1>Menu</h1></div>
-  <div class="content" id="menu-browse-content"></div>
-  <div class="tab-bar">
-    <div class="tab" onclick="go('s-orders')"><div class="tab-icon">📋</div>Orders</div>
-    <div class="tab" onclick="go('s-history')"><div class="tab-icon">🕐</div>Historiek</div>
-    <div class="tab active"><div class="tab-icon">🍽️</div>Menu</div>
-    <div class="tab" onclick="logout()"><div class="tab-icon">🚪</div>Uitlog</div>
-  </div>
-</div>
-
-<!-- ADMIN -->
-<div id="s-admin" class="screen">
-  <div class="header"><h1>Beheer</h1></div>
-  <div class="content">
-
-    <!-- Firebase -->
-    <div class="card">
-      <div style="font-size:16px;font-weight:700;margin-bottom:8px">Firebase synchronisatie</div>
-      <label>Database URL</label>
-      <input type="text" class="inp" id="fb-url" placeholder="https://mijn-project.firebaseio.com">
-      <button class="btn btn-primary btn-sm" onclick="saveFbUrl()">Opslaan &amp; verbinden</button>
-    </div>
-
-    <!-- Printers -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:16px;font-weight:700">Printers</div>
-        <button class="btn btn-primary btn-sm" onclick="openAddPrinter()">+ Printer</button>
+      <div class="kpi-grid">
+        <div class="kpi"><span class="kpi-icon">📋</span><div class="kpi-label">Open tafels</div><div class="kpi-value" id="kpi-open">—</div></div>
+        <div class="kpi"><span class="kpi-icon">⏳</span><div class="kpi-label">In wachtrij</div><div class="kpi-value" id="kpi-queue">—</div></div>
+        <div class="kpi"><span class="kpi-icon">✓</span><div class="kpi-label">Geserveerd</div><div class="kpi-value" id="kpi-served">—</div></div>
+        <div class="kpi"><span class="kpi-icon">💶</span><div class="kpi-label">Omzet vandaag</div><div class="kpi-value green" id="kpi-revenue">€—</div></div>
       </div>
-      <div id="printer-list"></div>
-    </div>
 
-    <!-- Categorieën -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:16px;font-weight:700">Categorieën</div>
-        <button class="btn btn-primary btn-sm" onclick="openAddCat()">+ Categorie</button>
+      <div class="split-3">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Actieve tafels</span>
+            <div class="filter-tabs">
+              <button class="filter-tab active" data-filter="all" onclick="setFilter('all',this)">Alle</button>
+              <button class="filter-tab" data-filter="open" onclick="setFilter('open',this)">Open</button>
+              <button class="filter-tab" data-filter="served" onclick="setFilter('served',this)">Geserveerd</button>
+            </div>
+          </div>
+          <div class="card-body dense" id="orders-list"></div>
+        </div>
+        <div id="detail-panel">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Detail</span></div>
+            <div class="card-body">
+              <div class="detail-empty">
+                <div class="icon">👈</div>
+                <div>Selecteer een tafel</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div id="cat-list"></div>
-    </div>
+    </section>
 
-    <!-- Tafels -->
-    <div class="card">
-      <div style="font-size:16px;font-weight:700;margin-bottom:12px">Tafels</div>
-      <p style="font-size:12px;color:#888;margin-bottom:10px">Beschikbare tafelnummers (komma-gescheiden):</p>
-      <input type="text" class="inp" id="tables-input" placeholder="bv. 1, 2, 3, 4, 5, 6, 7, 8, 9, 10">
-      <button class="btn btn-primary btn-sm" onclick="saveTables()">Opslaan</button>
-    </div>
+    <!-- STATISTIEKEN -->
+    <section id="p-stats" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Statistieken</div>
+          <div class="page-subtitle">Real-time overzicht van wat er besteld werd</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <select class="inp" id="stats-scope" onchange="renderStats()" style="width:auto">
+            <option value="all">Alle bestellingen</option>
+            <option value="active">Alleen actieve</option>
+            <option value="paid">Alleen betaald</option>
+          </select>
+          <button class="btn btn-success" onclick="exportStatsXlsx()">📥 Export Excel</button>
+        </div>
+      </div>
 
-    <!-- Medewerkers -->
-    <div class="card">
-      <div style="font-size:16px;font-weight:700;margin-bottom:12px">Medewerkers</div>
-      <div id="staff-list"></div>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <input type="text" class="inp" id="staff-name" placeholder="Naam" style="margin:0;flex:1">
-        <input type="text" class="inp" id="staff-pin" placeholder="PIN" style="margin:0;width:80px;text-align:center">
-        <button class="btn btn-primary btn-sm" onclick="addStaff()">+</button>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Aantal bestellingen</div><div class="kpi-value" id="stats-orders">—</div></div>
+        <div class="kpi"><div class="kpi-label">Items verkocht</div><div class="kpi-value" id="stats-items">—</div></div>
+        <div class="kpi"><div class="kpi-label">Unieke gerechten</div><div class="kpi-value" id="stats-unique">—</div></div>
+        <div class="kpi"><div class="kpi-label">Totale waarde</div><div class="kpi-value green" id="stats-total">€—</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="card-title">Activiteit per uur</span><span style="font-size:12px;color:var(--text-muted)">Op basis van moment van bestelling</span></div>
+        <div class="card-body"><div id="stats-hourly"></div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="card-title">Per categorie</span></div>
+        <div class="card-body dense"><div id="stats-cat-table"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Per item</span></div>
+        <div class="card-body dense"><div id="stats-item-table"></div></div>
+      </div>
+    </section>
+
+    <!-- HISTORIEK -->
+    <section id="p-history" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Historiek</div>
+          <div class="page-subtitle">Alle afgesloten bestellingen</div>
+        </div>
+        <button class="btn btn-danger" onclick="clearHistory()">🗑 Historiek wissen</button>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Tafels betaald</div><div class="kpi-value" id="hist-count">—</div></div>
+        <div class="kpi"><div class="kpi-label">Items verkocht</div><div class="kpi-value" id="hist-items">—</div></div>
+        <div class="kpi"><div class="kpi-label">Gem. orderwaarde</div><div class="kpi-value" id="hist-avg">€—</div></div>
+        <div class="kpi"><div class="kpi-label">Totale omzet</div><div class="kpi-value green" id="hist-total">€—</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="card-title">Omzet per betaalwijze</span></div>
+        <div class="card-body dense"><div id="hist-payments"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Afgesloten bestellingen</span></div>
+        <div class="card-body dense"><div id="history-table"></div></div>
+      </div>
+    </section>
+
+    <!-- MENU -->
+    <section id="p-menu" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Menu</div>
+          <div class="page-subtitle">Beheer alle gerechten en dranken</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="exportMenuXlsx()">📥 Export</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('menu-import').click()">📤 Import</button>
+          <input type="file" id="menu-import" accept=".xlsx,.xls" style="display:none" onchange="importMenuXlsx(this)">
+          <button class="btn btn-primary" onclick="openItemModal()">+ Nieuw item</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body dense">
+          <table>
+            <thead><tr><th>Item</th><th>Prijs</th><th>Categorie</th><th>Variaties</th><th class="col-actions">Acties</th></tr></thead>
+            <tbody id="menu-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATEGORIEËN -->
+    <section id="p-categories" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Categorieën</div>
+          <div class="page-subtitle">Groepeer items en koppel ze aan printers</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="exportCatsXlsx()">📥 Export</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('cat-import').click()">📤 Import</button>
+          <input type="file" id="cat-import" accept=".xlsx,.xls" style="display:none" onchange="importCatsXlsx(this)">
+          <button class="btn btn-primary" onclick="openCatModal()">+ Nieuwe categorie</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body dense">
+          <table>
+            <thead><tr><th>Naam</th><th>Aantal items</th><th>Printers</th><th class="col-actions">Acties</th></tr></thead>
+            <tbody id="cat-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAFELS -->
+    <section id="p-tables" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Tafels</div>
+          <div class="page-subtitle">Beheer beschikbare tafelnummers</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="exportTablesXlsx()">📥 Export</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('tab-import').click()">📤 Import</button>
+          <input type="file" id="tab-import" accept=".xlsx,.xls" style="display:none" onchange="importTablesXlsx(this)">
+          <button class="btn btn-primary" onclick="openTableModal()">+ Tafel toevoegen</button>
+        </div>
+      </div>
+      <div class="split">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Beschikbare tafels</span><span style="font-size:12px;color:var(--text-muted)" id="tables-count"></span></div>
+          <div class="card-body dense"><div id="tables-list"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Bulk bewerken</span></div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Komma-gescheiden lijst van tafelnummers (bv. <code>1, 2, 3, A1, A2, terras-1</code>)</p>
+            <textarea class="inp" id="tables-bulk" rows="6" style="font-family:monospace;resize:vertical"></textarea>
+            <button class="btn btn-primary" onclick="saveBulkTables()">Opslaan</button>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:14px;line-height:1.5">Tafelnummers kunnen ook tekst zijn (bv. <em>Bar 1</em>, <em>Terras A</em>). Bediening kiest deze nummers in een dropdown bij nieuwe bestellingen.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRINTERS -->
+    <section id="p-printers" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Printers</div>
+          <div class="page-subtitle">Configuratie van netwerkprinters</div>
+        </div>
+        <button class="btn btn-primary" onclick="openPrinterModal()">+ Nieuwe printer</button>
+      </div>
+      <div class="card">
+        <div class="card-body dense">
+          <table>
+            <thead><tr><th>Naam</th><th>IP-adres</th><th>Type</th><th>Gekoppelde categorieën</th><th class="col-actions">Acties</th></tr></thead>
+            <tbody id="printer-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- MEDEWERKERS -->
+    <section id="p-staff" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Medewerkers</div>
+          <div class="page-subtitle">PIN-codes voor de mobiele app</div>
+        </div>
+        <button class="btn btn-primary" onclick="openStaffModal()">+ Nieuwe medewerker</button>
+      </div>
+      <div class="card">
+        <div class="card-body dense">
+          <table>
+            <thead><tr><th>Naam</th><th>PIN</th><th>Rol</th><th class="col-actions">Acties</th></tr></thead>
+            <tbody id="staff-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="p-settings" class="page">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Instellingen</div>
+          <div class="page-subtitle">Configuratie van de applicatie</div>
+        </div>
+      </div>
+      <div class="split">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Firebase synchronisatie</span></div>
+          <div class="card-body">
+            <div class="field">
+              <label>Database URL</label>
+              <input type="text" class="inp" id="fb-url" placeholder="https://jouw-project.firebaseio.com">
+            </div>
+            <button class="btn btn-primary" onclick="saveFbUrl()">Opslaan en verbinden</button>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:14px;line-height:1.5">De URL wordt opgeslagen in deze browser en bij elke wijziging gesynchroniseerd met alle gekoppelde toestellen.</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Status</span></div>
+          <div class="card-body">
+            <div class="field">
+              <label>Verbindingsstatus</label>
+              <div style="font-size:14px"><span class="sync-dot" id="sync-dot-2" style="margin-right:6px"></span><span id="sync-txt-2">—</span></div>
+            </div>
+            <div class="field">
+              <label>Laatste synchronisatie</label>
+              <div style="font-size:14px" id="last-sync-2">—</div>
+            </div>
+            <div class="field">
+              <label>Aantal actieve orders</label>
+              <div style="font-size:14px" id="settings-active-count">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-header"><span class="card-title">Betaalwijzen</span></div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Lijst van betaalwijzen die getoond worden bij het markeren van een rekening als betaald. Eén per regel of komma-gescheiden.</p>
+          <textarea class="inp" id="pm-input" rows="5" style="font-family:inherit;resize:vertical"></textarea>
+          <button class="btn btn-primary" onclick="savePaymentMethods()">Opslaan</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- MODAL: BETAALWIJZE -->
+<div class="modal-bg" id="m-payment">
+  <div class="modal"></div>
+</div>
+
+<!-- MODAL: ITEM -->
+<div class="modal-bg" id="m-item">
+  <div class="modal">
+    <div class="modal-header" id="m-item-title">Menu item</div>
+    <div class="field"><label>Naam</label><input type="text" class="inp" id="i-name" placeholder="bv. Steak frites"></div>
+    <div class="field"><label>Prijs (€)</label><input type="number" class="inp" id="i-price" placeholder="12.50" step="0.01" min="0"></div>
+    <div class="field"><label>Categorie</label><select class="inp" id="i-cat"></select></div>
+    <div class="field"><label>Variaties (komma-gescheiden, optioneel)</label><input type="text" class="inp" id="i-vars" placeholder="bv. Saignant, À point, Bien cuit"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cm('m-item')">Annuleer</button>
+      <button class="btn btn-primary" onclick="saveItem()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CATEGORIE -->
+<div class="modal-bg" id="m-cat">
+  <div class="modal">
+    <div class="modal-header" id="m-cat-title">Categorie</div>
+    <div class="field"><label>Naam</label><input type="text" class="inp" id="c-name" placeholder="bv. Warme keuken"></div>
+    <div class="field"><label>Kleur</label><div class="color-grid" id="c-colors"></div></div>
+    <div class="field"><label>Stuur orders naar deze printer(s)</label><div class="chk-list" id="c-printers"></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cm('m-cat')">Annuleer</button>
+      <button class="btn btn-primary" onclick="saveCat()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PRINTER -->
+<div class="modal-bg" id="m-printer">
+  <div class="modal">
+    <div class="modal-header" id="m-printer-title">Printer</div>
+    <div class="field"><label>Naam</label><input type="text" class="inp" id="p-name" placeholder="bv. Keuken"></div>
+    <div class="field"><label>IP-adres</label><input type="text" class="inp" id="p-ip" placeholder="192.168.1.10"></div>
+    <div class="field">
+      <label>Type</label>
+      <div class="toggle-row">
+        <div class="toggle" id="p-bill-toggle" onclick="toggleBill()"></div>
+        <span style="font-size:14px">Kassaprinter (drukt rekeningen af)</span>
       </div>
     </div>
-
-    <!-- Menu items -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:16px;font-weight:700">Menu items</div>
-        <button class="btn btn-primary btn-sm" onclick="openAddItem()">+ Item</button>
-      </div>
-      <div id="admin-menu"></div>
-    </div>
-
-    <button class="btn btn-danger" style="margin-top:8px" onclick="logout()">Afmelden</button>
-  </div>
-</div>
-
-<!-- MODAL: item opties (bestellen) -->
-<div class="mbackdrop" id="m-item-opts">
-  <div class="modal">
-    <h2 id="m-item-title">Item toevoegen</h2>
-    <div id="m-var-section"></div>
-    <label>Commentaar (optioneel)</label>
-    <input type="text" class="inp" id="m-comment" placeholder="bv. zonder ui, extra saus...">
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button class="btn btn-secondary" style="flex:1" onclick="cm('m-item-opts')">Annuleer</button>
-      <button class="btn btn-primary" style="flex:1" onclick="confirmAdd()">Toevoegen</button>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cm('m-printer')">Annuleer</button>
+      <button class="btn btn-primary" onclick="savePrinter()">Opslaan</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: commentaar bewerken -->
-<div class="mbackdrop" id="m-edit-cmt">
+<!-- MODAL: TAFEL -->
+<div class="modal-bg" id="m-table">
   <div class="modal">
-    <h2 id="m-edit-title">Commentaar</h2>
-    <input type="text" class="inp" id="m-edit-inp" placeholder="bv. zonder ui, extra saus...">
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button class="btn btn-secondary" style="flex:1" onclick="cm('m-edit-cmt')">Annuleer</button>
-      <button class="btn btn-primary" style="flex:1" onclick="saveComment()">Opslaan</button>
+    <div class="modal-header">Tafel toevoegen</div>
+    <div class="field"><label>Tafelnummer of -naam</label><input type="text" class="inp" id="t-name" placeholder="bv. 5 of Terras A"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cm('m-table')">Annuleer</button>
+      <button class="btn btn-primary" onclick="saveTable()">Toevoegen</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: admin printer toevoegen/bewerken -->
-<div class="mbackdrop" id="m-add-printer">
+<!-- MODAL: STAFF -->
+<div class="modal-bg" id="m-staff">
   <div class="modal">
-    <h2 id="m-printer-title">Printer toevoegen</h2>
-    <label>Naam</label>
-    <input type="text" class="inp" id="p-name" placeholder="bv. Keuken">
-    <label>IP-adres</label>
-    <input type="text" class="inp" id="p-ip" placeholder="bv. 192.168.1.10">
-    <label>Is dit de kassaprinter? (drukt rekeningen af)</label>
-    <div style="display:flex;gap:10px;margin-bottom:12px">
-      <button id="p-bill-yes" class="btn btn-secondary btn-sm" onclick="setBillPrinter(true)" style="flex:1">✓ Ja</button>
-      <button id="p-bill-no" class="btn btn-primary btn-sm" onclick="setBillPrinter(false)" style="flex:1">Nee</button>
+    <div class="modal-header">Medewerker toevoegen</div>
+    <div class="field"><label>Naam</label><input type="text" class="inp" id="s-name" placeholder="bv. Sarah"></div>
+    <div class="field"><label>PIN-code</label><input type="text" class="inp" id="s-pin" placeholder="bv. 5678" maxlength="6"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="cm('m-staff')">Annuleer</button>
+      <button class="btn btn-primary" onclick="saveStaff()">Opslaan</button>
     </div>
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button class="btn btn-secondary" style="flex:1" onclick="cm('m-add-printer')">Annuleer</button>
-      <button class="btn btn-primary" style="flex:1" onclick="savePrinter()">Opslaan</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: admin categorie toevoegen/bewerken -->
-<div class="mbackdrop" id="m-add-cat">
-  <div class="modal">
-    <h2 id="m-cat-title">Categorie toevoegen</h2>
-    <label>Naam</label>
-    <input type="text" class="inp" id="c-name" placeholder="bv. Warme keuken">
-    <label>Kleur (badge)</label>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="c-color-picker"></div>
-    <label>Printers (selecteer 1 of meerdere)</label>
-    <div id="c-printer-list" style="margin-bottom:12px"></div>
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button class="btn btn-secondary" style="flex:1" onclick="cm('m-add-cat')">Annuleer</button>
-      <button class="btn btn-primary" style="flex:1" onclick="saveCat()">Opslaan</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: admin menu item -->
-<div class="mbackdrop" id="m-add-item">
-  <div class="modal">
-    <h2 id="m-item-admin-title">Menu item toevoegen</h2>
-    <label>Naam</label>
-    <input type="text" class="inp" id="a-name" placeholder="bv. Steak frites">
-    <label>Prijs (€)</label>
-    <input type="number" class="inp" id="a-price" placeholder="12.50" step="0.01" min="0">
-    <label>Categorie</label>
-    <select class="inp" id="a-cat"></select>
-    <label>Variaties (komma-gescheiden, optioneel)</label>
-    <input type="text" class="inp" id="a-vars" placeholder="bv. Saignant, À point, Bien cuit">
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button class="btn btn-secondary" style="flex:1" onclick="cm('m-add-item')">Annuleer</button>
-      <button class="btn btn-primary" style="flex:1" onclick="saveItem()">Opslaan</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL: split -->
-<div class="mbackdrop" id="m-split">
-  <div class="modal">
-    <h2>Splitsen / Toevoegen</h2>
-    <p style="font-size:14px;color:#555;margin-bottom:12px">Kies een bestaand tafel/naam-combo:</p>
-    <div id="split-list"></div>
-    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e5e5e5">
-      <p style="font-size:13px;color:#555;margin-bottom:8px">Of maak een nieuw combo:</p>
-      <input type="number" class="inp" id="split-table" placeholder="Tafel nr" min="1" style="display:none">
-      <select class="inp" id="split-table-select"></select>
-      <input type="text" class="inp" id="split-name" placeholder="Naam klant">
-      <button class="btn btn-primary" onclick="createSplit()">Aanmaken</button>
-    </div>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="cm('m-split')">Sluiten</button>
-  </div>
-</div>
-
-<!-- MODAL: geserveerd -->
-<div class="mbackdrop" id="m-served">
-  <div class="modal">
-    <h2>Items markeren als geserveerd</h2>
-    <div id="served-list"></div>
-    <button class="btn btn-primary" style="margin-top:12px" onclick="saveServed()">Opslaan</button>
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="cm('m-served')">Annuleer</button>
   </div>
 </div>
 
 <script>
-// ⚠️ FIREBASE URL — hier instellen vóór deployen op GitHub Pages
-// Vul je Firebase Realtime Database URL in tussen de aanhalingstekens:
-var FIREBASE_URL = 'https://bestelappolvlombeek-default-rtdb.europe-west1.firebasedatabase.app';
-
-var PLABELS = {bar:'Bar', kitchen:'Keuken', cold:'Koude keuken', bill:'Kassa'};
 var CAT_COLORS = [
-  {id:'blue', bg:'#dbeafe', text:'#1d4ed8', label:'Blauw'},
-  {id:'yellow', bg:'#fef3c7', text:'#92400e', label:'Geel'},
-  {id:'green', bg:'#d1fae5', text:'#065f46', label:'Groen'},
-  {id:'purple', bg:'#f3e8ff', text:'#6b21a8', label:'Paars'},
-  {id:'red', bg:'#fee2e2', text:'#991b1b', label:'Rood'},
-  {id:'orange', bg:'#ffedd5', text:'#9a3412', label:'Oranje'},
-  {id:'pink', bg:'#fce7f3', text:'#9d174d', label:'Roze'},
-  {id:'gray', bg:'#f3f4f6', text:'#374151', label:'Grijs'}
+  {id:'blue',bg:'#dbeafe',text:'#1d4ed8'},{id:'yellow',bg:'#fef3c7',text:'#92400e'},
+  {id:'green',bg:'#d1fae5',text:'#065f46'},{id:'purple',bg:'#f3e8ff',text:'#6b21a8'},
+  {id:'red',bg:'#fee2e2',text:'#991b1b'},{id:'orange',bg:'#ffedd5',text:'#9a3412'},
+  {id:'pink',bg:'#fce7f3',text:'#9d174d'},{id:'gray',bg:'#f3f4f6',text:'#374151'}
 ];
 
-var currentPin = '', currentWaiter = '', currentRole = null;
-var currentOrder = null, basket = {};
-var pendingId = null, pendingVar = null, editKey = null, servedData = null;
-var editPrinterId = null, editCatId = null, editItemId = null;
-var newPrinterIsBill = false;
-var selectedColor = 'blue';
-var selectedCatPrinters = [];
-var pollTimer = null;
-
-var state={
-  fbUrl:'',
-  printers:[
-    {id:'p1',name:'Bar',ip:'',isBill:false},
-    {id:'p2',name:'Keuken',ip:'',isBill:false},
-    {id:'p3',name:'Koude keuken',ip:'',isBill:false},
-    {id:'p4',name:'Kassa',ip:'',isBill:true}
-  ],
-  categories:[
-    {id:'bar',name:'Bar',color:'blue',printers:['p1']},
-    {id:'kitchen',name:'Keuken',color:'yellow',printers:['p2']},
-    {id:'cold',name:'Koude keuken',color:'green',printers:['p3']}
-  ],
-  tables:['1','2','3','4','5','6','7','8','9','10'],
-  staff:[
-    {name:'Bediening',pin:'1234'},
-    {name:'Admin',pin:'9999',isAdmin:true}
-  ],
-  menu: [
-    {id:1,name:'Flessenwater',price:2.5,cat:'bar',vars:[]},
-    {id:2,name:'Witte wijn (glas)',price:5,cat:'bar',vars:[]},
-    {id:3,name:'Rode wijn (glas)',price:5,cat:'bar',vars:[]},
-    {id:4,name:'Bier (pint)',price:4,cat:'bar',vars:[]},
-    {id:5,name:'Frisdrank',price:2.5,cat:'bar',vars:[]},
-    {id:6,name:'Soep van de dag',price:6,cat:'kitchen',vars:[]},
-    {id:7,name:'Steak frites',price:22,cat:'kitchen',vars:['Saignant','À point','Bien cuit']},
-    {id:8,name:'Zalm met groenten',price:18,cat:'kitchen',vars:[]},
-    {id:9,name:'Vegetarische schotel',price:16,cat:'kitchen',vars:[]},
-    {id:10,name:'Chocolademousse',price:7,cat:'cold',vars:[]},
-    {id:11,name:'Crème brûlée',price:7.5,cat:'cold',vars:[]},
-    {id:12,name:'Fruitschaal',price:6,cat:'cold',vars:[]}
-  ],
-  orders: [],
-  nextOid: 1,
-  nextMid: 13,
-  nextPid: 5,
-  nextCid: 10
+var state = {
+  fbUrl:'', printers:[], categories:[], staff:[], menu:[], tables:[],
+  paymentMethods:['Cash','Payconiq','Bancontact','Sponsoring'],
+  orders:[], nextMid:1, nextPid:1, nextCid:1
 };
 
-function saveLocal(){try{localStorage.setItem('pr4',JSON.stringify(state));}catch(e){}}
-function loadLocal(){try{var s=localStorage.getItem('pr4');if(s)state=JSON.parse(s);}catch(e){}}
-loadLocal();
-// hardcoded Firebase URL overschrijft altijd de lokaal opgeslagen waarde
-if(FIREBASE_URL) state.fbUrl=FIREBASE_URL;
-
+var pollTimer = null;
 var settingsLoadedFromFb = false;
+var selectedColor = 'blue';
+var selectedCatPrinters = [];
+var editItemId = null, editCatId = null, editPrinterId = null;
+var isBillPrinter = false;
+var activeFilter = 'all';
+var selectedGroupKey = null;
+var lastSync = null;
+var expandedHistKeys = {};
 
-// Push full settings to Firebase
-function pushSettings(){
-  if(!state.fbUrl) return;
-  // Niet pushen voor we tenminste 1x van Firebase hebben opgehaald
-  // (anders overschrijven we serverdata met lokale defaults)
-  if(!settingsLoadedFromFb){
-    console.warn('[Settings] Niet pushen: nog niet gesynchroniseerd met Firebase');
-    return;
-  }
-  var settings={
-    printers: state.printers,
-    categories: state.categories,
-    staff: state.staff,
-    menu: state.menu,
-    tables: state.tables,
-    nextMid: state.nextMid,
-    nextPid: state.nextPid,
-    nextCid: state.nextCid
-  };
-  fetch(state.fbUrl+'/settings.json',{method:'PUT',body:JSON.stringify(settings)}).catch(function(){});
-}
-
-// Pull settings from Firebase and apply
-function fetchSettings(cb){
-  if(!state.fbUrl){if(cb)cb();return;}
-  fetch(state.fbUrl+'/settings.json')
-    .then(function(r){return r.json();})
-    .then(function(data){
-      if(data){
-        if(data.printers) state.printers=data.printers;
-        if(data.categories) state.categories=data.categories;
-        if(data.staff) state.staff=data.staff;
-        if(data.menu) state.menu=data.menu;
-        if(data.tables) state.tables=data.tables;
-        if(data.nextMid) state.nextMid=data.nextMid;
-        if(data.nextPid) state.nextPid=data.nextPid;
-        if(data.nextCid) state.nextCid=data.nextCid;
-        saveLocal();
-      } else {
-        // Firebase is leeg — push huidige defaults zodat andere toestellen ze krijgen
-        var initial={
-          printers: state.printers, categories: state.categories,
-          staff: state.staff, menu: state.menu, tables: state.tables,
-          nextMid: state.nextMid, nextPid: state.nextPid, nextCid: state.nextCid
-        };
-        fetch(state.fbUrl+'/settings.json',{method:'PUT',body:JSON.stringify(initial)}).catch(function(){});
-      }
-      settingsLoadedFromFb = true;
-      if(cb) cb();
-    })
-    .catch(function(){if(cb)cb();});
-}
-
-// ── CATEGORY HELPERS ──────────────────────────────────────
-function getCat(id){ return state.categories.find(function(c){return c.id===id;}); }
-function catColor(id){
-  var c = getCat(id);
-  var col = c ? CAT_COLORS.find(function(x){return x.id===c.color;}) : null;
-  return col || {bg:'#e5e5e5',text:'#555'};
-}
-function catBadge(id){
-  var c = getCat(id); if(!c) return '';
-  var col = catColor(id);
-  return '<span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+c.name+'</span>';
-}
-function catPrinterNames(cat){
-  if(!cat||!cat.printers) return '—';
-  return cat.printers.map(function(pid){
-    var p = state.printers.find(function(x){return x.id===pid;});
-    return p ? p.name : '';
-  }).filter(Boolean).join(', ');
-}
-
-// ── FIREBASE ──────────────────────────────────────────────
-function initFirebase(url){
-  if(!url){setSyncStatus('offline');return;}
-  setSyncStatus('connecting');
-  state.fbUrl = url.replace(/\/$/,'');
-  saveLocal();
-  startPolling();
-}
-function startPolling(){
-  if(pollTimer) clearInterval(pollTimer);
-  fetchSettings(function(){
-    renderAfterSync();
-    fetchFromFirebase();
-  });
-  pollTimer = setInterval(function(){
-    fetchSettings(function(){ renderAfterSync(); });
-    fetchFromFirebase();
-  }, 5000);
-}
-
-function renderAfterSync(){
-  var cur=document.querySelector('.screen.active');
-  if(!cur) return;
-  if(cur.id==='s-pin') populateStaffSelect();
-  if(cur.id==='s-admin'){
-    renderAdminMenu();
-    renderPrinters();
-    renderCats();
-    renderStaff();
-    renderFbConfig();
-  }
-  if(cur.id==='s-orders') renderOrders();
-  if(cur.id==='s-history') renderHistory();
-  if(cur.id==='s-menu-browse') renderMenuBrowse();
-}
-function fetchFromFirebase(){
-  if(!state.fbUrl) return;
-  fetch(state.fbUrl+'/orders.json')
-    .then(function(r){return r.json();})
-    .then(function(data){
-      setSyncStatus('online');
-      if(!data) return;
-      Object.values(data).forEach(function(ro){
-        var ex = state.orders.find(function(o){return o.fbId===ro.fbId;});
-        if(!ex) state.orders.push(ro);
-        else { ex.paid=ro.paid; ex.items=ro.items; }
-      });
-      saveLocal();
-      var cur = document.querySelector('.screen.active');
-      if(cur&&cur.id==='s-orders') renderOrders();
-      if(cur&&cur.id==='s-history') renderHistory();
-    })
-    .catch(function(){setSyncStatus('error');});
-}
-function pushOrder(o){ if(!state.fbUrl) return; fetch(state.fbUrl+'/orders/'+o.fbId+'.json',{method:'PUT',body:JSON.stringify(o)}).catch(function(){}); }
-function pushOrderUpdate(o){ pushOrder(o); }
-function clearRemoteHistory(){
-  if(!state.fbUrl) return;
-  fetch(state.fbUrl+'/orders.json').then(function(r){return r.json();}).then(function(data){
-    if(!data) return;
-    Object.keys(data).forEach(function(k){ if(data[k].paid) fetch(state.fbUrl+'/orders/'+k+'.json',{method:'DELETE'}).catch(function(){}); });
-  }).catch(function(){});
-}
-function setSyncStatus(s){
-  var dot=document.getElementById('sync-dot'), txt=document.getElementById('sync-txt');
-  if(!dot) return;
-  if(s==='online'){dot.className='sync-dot ok';txt.textContent='Sync';}
-  else if(s==='error'){dot.className='sync-dot err';txt.textContent='Fout';}
-  else if(s==='connecting'){dot.className='sync-dot';txt.textContent='...';}
-  else{dot.className='sync-dot';txt.textContent='Lokaal';}
-}
-
-// ── NAVIGATION ────────────────────────────────────────────
-function go(id){
-  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
-  document.getElementById(id).classList.add('active');
-  if(id==='s-orders') renderOrders();
-  if(id==='s-history') renderHistory();
-  if(id==='s-menu-browse') renderMenuBrowse();
-  if(id==='s-admin'){renderAdminMenu();renderPrinters();renderCats();renderStaff();renderFbConfig();renderTablesInput();}
-}
-function renderTablesInput(){
-  var el=document.getElementById('tables-input');
-  if(el) el.value=(state.tables||[]).join(', ');
-}
-function saveTables(){
-  var raw=document.getElementById('tables-input').value;
-  var arr=raw.split(',').map(function(t){return t.trim();}).filter(Boolean);
-  state.tables=arr;
-  saveLocal();pushSettings();
-  notify('Tafels opgeslagen ✓');
-}
-function notify(msg){var n=document.getElementById('notif');n.textContent=msg;n.classList.add('show');setTimeout(function(){n.classList.remove('show');},2200);}
+function notify(msg){var n=document.getElementById('notif');n.textContent=msg;n.classList.add('show');setTimeout(function(){n.classList.remove('show');},2000);}
 function om(id){document.getElementById(id).classList.add('open');}
 function cm(id){document.getElementById(id).classList.remove('open');}
-function esc(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
-function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
-function initials(name){return (name||'?').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();}
+function esc(s){return String(s).replace(/'/g,"\\'");}
 
-// ── PIN ───────────────────────────────────────────────────
-function saveLoginFbUrl(){
-  var url=document.getElementById('login-fb-url').value.trim().replace(/\/$/,'');
-  if(!url){notify('Vul een URL in');return;}
-  state.fbUrl=url;
-  saveLocal();
-  initFirebase(url);
-  notify('Verbinding gemaakt — log in om verder te gaan');
+// ── FIREBASE ──────────────────────────────────────────────
+function setSyncStatus(s){
+  var dot=document.getElementById('sync-dot'),txt=document.getElementById('sync-txt');
+  var dot2=document.getElementById('sync-dot-2'),txt2=document.getElementById('sync-txt-2');
+  var label, cls;
+  if(s==='ok'){cls='sync-dot ok';label='Verbonden';}
+  else if(s==='err'){cls='sync-dot err';label='Verbindingsfout';}
+  else{cls='sync-dot';label='Niet verbonden';}
+  dot.className=cls;txt.textContent=label;
+  if(dot2){dot2.className=cls;txt2.textContent=label;}
 }
 
-function pp(d){
-  if(currentPin.length>=6) return;
-  currentPin+=d; updPin();
-  if(currentPin.length>=4){
-    var name=document.getElementById('login-name').value.trim();
-    var match=state.staff.find(function(s){return s.pin===currentPin;});
-    if(match){
-      if(match.isAdmin){
-        document.getElementById('pin-err').textContent='Admin gebruikt admin.html';
-        currentPin='';updPin();return;
+function fbGet(path){return fetch(state.fbUrl+path+'.json').then(function(r){return r.json();});}
+function fbPut(path,data){return fetch(state.fbUrl+path+'.json',{method:'PUT',body:JSON.stringify(data)});}
+function fbDel(path){return fetch(state.fbUrl+path+'.json',{method:'DELETE'});}
+
+function fetchAll(){
+  if(!state.fbUrl) return;
+  Promise.all([fbGet('/orders'), fbGet('/settings')])
+    .then(function(results){
+      setSyncStatus('ok');
+      lastSync = new Date();
+      updLastSync();
+      var orders = results[0];
+      var settings = results[1];
+      state.orders = orders ? Object.values(orders) : [];
+      if(settings){
+        if(settings.printers) state.printers=settings.printers;
+        if(settings.categories) state.categories=settings.categories;
+        if(settings.staff) state.staff=settings.staff;
+        if(settings.menu) state.menu=settings.menu;
+        if(settings.tables) state.tables=settings.tables;
+        if(settings.paymentMethods) state.paymentMethods=settings.paymentMethods;
+        if(settings.nextMid) state.nextMid=settings.nextMid;
+        if(settings.nextPid) state.nextPid=settings.nextPid;
+        if(settings.nextCid) state.nextCid=settings.nextCid;
       }
-      if(!name){document.getElementById('pin-err').textContent='Vul uw naam in.';currentPin='';updPin();return;}
-      currentWaiter=name;
-      currentPin='';updPin();
-      if(state.fbUrl) initFirebase(state.fbUrl);
-      go('s-orders');
-    } else if(currentPin.length>=6){
-      document.getElementById('pin-err').textContent='Onjuiste PIN.';currentPin='';updPin();
-    }
-  }
-}
-function pd(){currentPin=currentPin.slice(0,-1);updPin();document.getElementById('pin-err').textContent='';}
-function pc(){currentPin='';updPin();document.getElementById('pin-err').textContent='';}
-function updPin(){
-  for(var i=0;i<6;i++){
-    var dot=document.getElementById('pd-'+i);
-    if(!dot) continue;
-    if(i<currentPin.length) dot.classList.add('filled');
-    else dot.classList.remove('filled');
-  }
-}
-function logout(){
-  currentPin='';currentWaiter='';currentRole=null;updPin();
-  document.getElementById('pin-err').textContent='';
-  document.getElementById('login-name').value='';
-  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
-  go('s-pin');
+      settingsLoadedFromFb = true;
+      renderAll();
+    })
+    .catch(function(){setSyncStatus('err');});
 }
 
-// ── ORDERS LIST ───────────────────────────────────────────
-function renderOrders(){
-  var el=document.getElementById('orders-list');
-  var active=state.orders.filter(function(o){return !o.paid;});
-  if(!active.length){el.innerHTML='<div class="empty"><div style="font-size:48px">📋</div><div>Nog geen bestellingen</div><div style="font-size:13px;margin-top:6px;color:#aaa">Tik op + Nieuw om te starten</div></div>';return;}
-  var groups={};
-  active.forEach(function(o){var k=o.table+'__'+o.name;if(!groups[k])groups[k]={table:o.table,name:o.name,orders:[]};groups[k].orders.push(o);});
-  var html='';
-  Object.values(groups).forEach(function(g){
-    var allItems=g.orders.reduce(function(a,o){return a.concat(o.items);},[]); 
-    var allServed=allItems.length>0&&allItems.every(function(i){return i.served;});
-    var anyServed=allItems.some(function(i){return i.served;});
-    var dot=allServed?'#22c55e':anyServed?'#f59e0b':'#e5e5e5';
-    var status=allServed?'Alles geserveerd':anyServed?'Gedeeltelijk geserveerd':'Open';
-    var total=allItems.reduce(function(s,i){return s+i.price*i.qty;},0);
-    var waiters=[];
-    g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
-    html+='<div class="tcard" onclick="openGroup(\''+esc(g.table)+'\',\''+esc(g.name)+'\')">';
-    html+='<div class="tavatar">'+initials(g.name)+'</div>';
-    html+='<div style="flex:1"><div style="font-weight:600">Tafel '+g.table+' — '+g.name+'</div>';
-    html+='<div style="font-size:12px;color:#888;margin-top:2px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+dot+';margin-right:4px"></span>'+status+' · €'+total.toFixed(2)+'</div>';
-    if(waiters.length) html+='<div style="margin-top:4px"><span class="waiter-tag">👤 '+waiters.join(', ')+'</span></div>';
-    html+='</div><div style="color:#888;font-size:22px">›</div></div>';
-  });
-  el.innerHTML=html;
+function updLastSync(){
+  if(!lastSync) return;
+  var t=lastSync.toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var l1=document.getElementById('last-sync');if(l1) l1.textContent='Laatste sync: '+t;
+  var l2=document.getElementById('last-sync-2');if(l2) l2.textContent=t;
 }
 
-function openGroup(table,name){renderDetail(table,name);go('s-order-detail');}
-
-function renderDetail(table,name){
-  var orders=state.orders.filter(function(o){return o.table==table&&o.name===name&&!o.paid;});
-  var allItems=orders.reduce(function(a,o){return a.concat(o.items);},[]); 
-  var total=allItems.reduce(function(s,i){return s+i.price*i.qty;},0);
-  document.getElementById('detail-title').textContent='Tafel '+table+' — '+name;
-  var html='';
-  orders.forEach(function(o){
-    html+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
-    html+='<span style="font-size:12px;color:#888">'+new Date(o.ts).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})+'</span>';
-    html+='<span class="waiter-tag">👤 '+(o.waiter||'—')+'</span></div>';
-    o.items.forEach(function(i){
-      html+='<div class="oitem"><div style="flex:1"><div style="font-size:15px">'+i.qty+'× '+i.name+'</div>';
-      if(i.variation) html+='<div style="font-size:12px;color:#2563eb">› '+i.variation+'</div>';
-      if(i.comment) html+='<div style="font-size:12px;color:#555;font-style:italic">💬 '+i.comment+'</div>';
-      html+='<div style="margin-top:2px">'+catBadge(i.cat)+'</div></div>';
-      html+='<div style="display:flex;align-items:center;gap:6px">';
-      html+=i.served?'<span style="color:#16a34a;font-size:12px">✓</span>':'<span style="color:#f59e0b;font-size:12px">⏳</span>';
-      html+='<div style="font-weight:600">€'+(i.price*i.qty).toFixed(2)+'</div></div></div>';
-    });
-    html+='</div>';
-  });
-  html+='<div class="card"><div class="total-row grand"><span>Totaal</span><span>€'+total.toFixed(2)+'</span></div></div>';
-  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  html+='<button class="btn btn-secondary btn-sm" onclick="openServed(\''+esc(table)+'\',\''+esc(name)+'\')">✓ Geserveerd</button>';
-  html+='<button class="btn btn-secondary btn-sm" onclick="openSplit()">+ Splitsen</button>';
-  html+='<button class="btn btn-primary btn-sm" onclick="addToOrder(\''+esc(table)+'\',\''+esc(name)+'\')">+ Toevoegen</button></div>';
-  html+='<button class="btn btn-success" style="margin-top:12px" onclick="openBill(\''+esc(table)+'\',\''+esc(name)+'\')">💶 Rekening afdrukken</button>';
-  document.getElementById('detail-content').innerHTML=html;
-}
-
-// ── NEW ORDER ─────────────────────────────────────────────
-function goNewOrder(){
-  // Open keuzescherm
-  var openCount=state.orders.filter(function(o){return !o.paid;}).reduce(function(map,o){map[o.table+'__'+o.name]=true;return map;},{});
-  var n=Object.keys(openCount).length;
-  document.getElementById('choice-open-count').textContent=n>0?n+' openstaande rekening'+(n===1?'':'en'):'Geen openstaande rekeningen';
-  go('s-new-choice');
-}
-
-function chooseNewOrder(){
-  var sel=document.getElementById('new-table');
-  sel.innerHTML='<option value="">— Kies tafel —</option>'+(state.tables||[]).map(function(t){return '<option value="'+t+'">Tafel '+t+'</option>';}).join('');
-  document.getElementById('new-name').value='';
-  go('s-new-order');
-}
-
-function chooseExistingOrder(){
-  renderOpenOrdersList();
-  go('s-open-orders');
-}
-
-function renderOpenOrdersList(){
-  var el=document.getElementById('open-orders-list');
-  if(!el){
-    console.warn('open-orders-list element niet gevonden — vermoedelijk oude cache. Probeer hard refresh (Ctrl+Shift+R).');
-    notify('Pagina verouderd, ververs (Ctrl+Shift+R)');
+function pushSettings(){
+  if(!state.fbUrl) return;
+  if(!settingsLoadedFromFb){
+    console.warn('[Settings] Niet pushen: nog niet gesynchroniseerd');
     return;
   }
-  var combos={};
-  state.orders.filter(function(o){return !o.paid;}).forEach(function(o){
-    var k=o.table+'__'+o.name;
-    if(!combos[k]) combos[k]={table:o.table,name:o.name,total:0,waiters:[]};
-    combos[k].total+=o.items.reduce(function(s,i){return s+i.price*i.qty;},0);
-    if(o.waiter && combos[k].waiters.indexOf(o.waiter)===-1) combos[k].waiters.push(o.waiter);
-  });
-  var arr=Object.values(combos);
-  arr.sort(function(a,b){
-    var ta=parseInt(a.table,10), tb=parseInt(b.table,10);
-    if(!isNaN(ta) && !isNaN(tb) && ta!==tb) return ta-tb;
-    if(String(a.table)!==String(b.table)) return String(a.table).localeCompare(String(b.table));
-    return a.name.localeCompare(b.name);
-  });
-  if(!arr.length){
-    el.innerHTML='<div class="empty"><div style="font-size:48px">📋</div><div>Geen openstaande rekeningen</div><button class="btn btn-primary" style="margin-top:16px" onclick="chooseNewOrder()">+ Nieuwe rekening openen</button></div>';
-    return;
-  }
-  var html='<div style="font-size:13px;color:#888;margin-bottom:12px">Tik om items toe te voegen:</div>';
-  arr.forEach(function(g){
-    var esc1=esc(String(g.table)), esc2=esc(g.name);
-    html+='<div class="tcard" onclick="addToOrderFromNew(\''+esc1+'\',\''+esc2+'\')">';
-    html+='<div class="tavatar">'+initials(g.name)+'</div>';
-    html+='<div style="flex:1"><div class="table-name" style="font-weight:600">Tafel '+g.table+' — '+g.name+'</div>';
-    html+='<div class="table-meta" style="font-size:12px;color:#888;margin-top:2px">€'+g.total.toFixed(2);
-    if(g.waiters.length) html+=' · 👤 '+g.waiters.join(', ');
-    html+='</div></div>';
-    html+='<div style="color:#2563eb;font-size:22px">›</div></div>';
-  });
-  el.innerHTML=html;
+  fbPut('/settings',{printers:state.printers,categories:state.categories,staff:state.staff,menu:state.menu,tables:state.tables,paymentMethods:state.paymentMethods,nextMid:state.nextMid,nextPid:state.nextPid,nextCid:state.nextCid}).catch(function(){});
 }
 
-function addToOrderFromNew(table, name){
-  currentOrder={table:table, name:name};
-  basket={};
-  activeCatFilter=null;
-  renderMenuScreen();
-  go('s-menu');
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  fetchAll();
+  pollTimer = setInterval(fetchAll, 4000);
 }
-function startOrder(){
-  var table=document.getElementById('new-table').value.trim();
-  var name=document.getElementById('new-name').value.trim();
-  if(!table||!name){notify('Vul tafel en naam in');return;}
-  currentOrder={table:table,name:name};basket={};renderMenuScreen();go('s-menu');
-}
-function addToOrder(table,name){currentOrder={table:table,name:name};basket={};renderMenuScreen();go('s-menu');}
-
-// ── MENU SCREEN ───────────────────────────────────────────
-var activeCatFilter = null;
-
-function renderMenuScreen(){
-  document.getElementById('menu-title').textContent='Tafel '+currentOrder.table+' — '+currentOrder.name;
-  renderBasket();
-  // Categorie filter-pills bovenaan (buiten scrollable content)
-  var tabHtml='<div class="cat-tabs-bar" id="cat-tabs-bar">';
-  state.categories.forEach(function(cat){
-    var items=state.menu.filter(function(i){return i.cat===cat.id;});
-    if(!items.length) return;
-    var col=catColor(cat.id);
-    var isActive=activeCatFilter===cat.id;
-    var styleAttr=isActive?' style="background:'+col.text+';color:#fff"':'';
-    tabHtml+='<button class="cat-tab-btn'+(isActive?' active':'')+'" data-cat="'+cat.id+'" onclick="toggleCatFilter(\''+esc(cat.id)+'\')"'+styleAttr+'>'+cat.name+'</button>';
-  });
-  tabHtml+='</div>';
-  document.getElementById('menu-cat-tabs').innerHTML=tabHtml;
-
-  var html='';
-  state.categories.forEach(function(cat){
-    if(activeCatFilter && activeCatFilter!==cat.id) return;
-    var items=state.menu.filter(function(i){return i.cat===cat.id;});
-    if(!items.length) return;
-    var col=catColor(cat.id);
-    html+='<div class="menu-cat" id="cat-section-'+cat.id+'"><h3 style="color:'+col.text+'">'+cat.name+'</h3>';
-    items.forEach(function(item){
-      var vsub=(item.vars&&item.vars.length)?' <span style="color:'+col.text+';opacity:.7;font-size:11px">· '+item.vars.join(', ')+'</span>':'';
-      html+='<div class="mitem" style="background:'+col.bg+';border-color:'+col.bg+'"><div style="flex:1"><div style="font-size:15px;font-weight:500;color:'+col.text+'">'+item.name+'</div>';
-      html+='<div style="font-size:13px;color:'+col.text+';opacity:.85">€'+item.price.toFixed(2)+vsub+'</div></div>';
-      html+='<span id="bc-'+item.id+'" style="font-weight:700;color:'+col.text+';min-width:20px;text-align:center"></span>';
-      html+='<button class="add-btn" onclick="openItemOpts('+item.id+')" style="background:'+col.text+'">+</button></div>';
-    });
-    html+='</div>';
-  });
-  // items zonder categorie (alleen tonen als geen filter actief)
-  if(!activeCatFilter){
-    var knownCats=state.categories.map(function(c){return c.id;});
-    var orphans=state.menu.filter(function(i){return knownCats.indexOf(i.cat)===-1;});
-    if(orphans.length){
-      html+='<div class="menu-cat" id="cat-section-overige"><h3>Overige</h3>';
-      orphans.forEach(function(item){
-        html+='<div class="mitem"><div style="flex:1"><div style="font-size:15px;font-weight:500">'+item.name+'</div>';
-        html+='<div style="font-size:13px;color:#555">€'+item.price.toFixed(2)+'</div></div>';
-        html+='<span id="bc-'+item.id+'" style="font-weight:700;color:#2563eb;min-width:20px;text-align:center"></span>';
-        html+='<button class="add-btn" onclick="openItemOpts('+item.id+')">+</button></div>';
-      });
-      html+='</div>';
-    }
-  }
-  document.getElementById('menu-items').innerHTML=html;
-  // herbouw basket counters
-  Object.keys(basket).forEach(function(k){updCount(basket[k].itemId);});
-  // scroll naar boven bij filter wissel
-  var container=document.querySelector('#s-menu .content');
-  if(container) container.scrollTop=0;
-}
-
-function toggleCatFilter(catId){
-  if(activeCatFilter===catId){
-    activeCatFilter=null;  // dezelfde categorie nogmaals = filter wissen
-  } else {
-    activeCatFilter=catId;
-  }
-  renderMenuScreen();
-}
-
-function openItemOpts(id){
-  var item=state.menu.find(function(i){return i.id===id;});
-  if(!item) return;
-  pendingId=id;pendingVar=null;
-  document.getElementById('m-item-title').textContent=item.name;
-  document.getElementById('m-comment').value='';
-  var html='';
-  if(item.vars&&item.vars.length){
-    html+='<label style="margin-bottom:8px">Bakwijze / Variatie</label><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">';
-    item.vars.forEach(function(v){html+='<button class="var-btn" onclick="selVar(this,\''+esc(v)+'\')">'+v+'</button>';});
-    html+='</div>';
-  }
-  document.getElementById('m-var-section').innerHTML=html;
-  om('m-item-opts');
-}
-function selVar(btn,val){document.querySelectorAll('.var-btn').forEach(function(b){b.classList.remove('sel');});btn.classList.add('sel');pendingVar=val;}
-function confirmAdd(){
-  if(!pendingId) return;
-  var comment=document.getElementById('m-comment').value.trim()||null;
-  var key=pendingId+'__'+(pendingVar||'')+'__'+Date.now();
-  basket[key]={itemId:pendingId,variation:pendingVar,comment:comment,qty:1};
-  cm('m-item-opts');renderBasket();updCount(pendingId);pendingId=null;pendingVar=null;
-}
-function updCount(id){
-  var total=0;Object.values(basket).forEach(function(b){if(b.itemId===id)total+=b.qty;});
-  var el=document.getElementById('bc-'+id);if(el)el.textContent=total>0?total:'';
-}
-function removeItem(key){
-  if(!basket[key]) return;var id=basket[key].itemId;basket[key].qty--;
-  if(basket[key].qty<=0)delete basket[key];renderBasket();updCount(id);
-}
-function addQty(key){if(basket[key]){basket[key].qty++;renderBasket();}}
-function openEditComment(key){
-  editKey=key;var b=basket[key];
-  var item=state.menu.find(function(i){return i.id===b.itemId;});
-  document.getElementById('m-edit-title').textContent=item?item.name:'Commentaar';
-  document.getElementById('m-edit-inp').value=b.comment||'';om('m-edit-cmt');
-}
-function saveComment(){
-  if(!editKey||!basket[editKey]) return;
-  basket[editKey].comment=document.getElementById('m-edit-inp').value.trim()||null;
-  cm('m-edit-cmt');renderBasket();
-}
-function renderBasket(){
-  var el=document.getElementById('basket-wrap');var keys=Object.keys(basket);
-  if(!keys.length){el.innerHTML='';return;}
-  var total=0;keys.forEach(function(k){var m=state.menu.find(function(i){return i.id===basket[k].itemId;});if(m)total+=m.price*basket[k].qty;});
-  var html='<div class="card" style="border-color:#2563eb"><div style="font-size:13px;font-weight:700;color:#2563eb;margin-bottom:8px">Huidige bestelling</div>';
-  keys.forEach(function(k){
-    var b=basket[k];var m=state.menu.find(function(i){return i.id===b.itemId;});if(!m) return;
-    html+='<div class="oitem"><div style="flex:1"><div style="font-size:14px;font-weight:500">'+m.name+'</div>';
-    if(b.variation) html+='<div style="font-size:12px;color:#2563eb">› '+b.variation+'</div>';
-    if(b.comment) html+='<div style="font-size:12px;color:#555;font-style:italic">💬 '+b.comment+'</div>';
-    html+='</div><div style="display:flex;align-items:center;gap:6px">';
-    html+='<button class="cbtn '+(b.comment?'has':'')+'" onclick="openEditComment(\''+esc(k)+'\')">💬</button>';
-    html+='<div class="qty-ctrl"><button class="qbtn" onclick="removeItem(\''+esc(k)+'\')">−</button>';
-    html+='<span style="font-size:15px;font-weight:600;min-width:20px;text-align:center">'+b.qty+'</span>';
-    html+='<button class="qbtn" onclick="addQty(\''+esc(k)+'\')">+</button></div>';
-    html+='<div style="font-weight:600;min-width:48px;text-align:right">€'+(m.price*b.qty).toFixed(2)+'</div></div></div>';
-  });
-  html+='<div class="total-row grand"><span>Totaal</span><span>€'+total.toFixed(2)+'</span></div></div>';
-  el.innerHTML=html;
-}
-
-function submitOrder(){
-  var keys=Object.keys(basket);if(!keys.length){notify('Voeg eerst items toe');return;}
-  var items=keys.map(function(k){
-    var b=basket[k];var m=state.menu.find(function(i){return i.id===b.itemId;});
-    return {id:m.id,name:m.name,price:m.price,cat:m.cat,qty:b.qty,variation:b.variation||null,comment:b.comment||null,served:false};
-  });
-  var order={id:state.nextOid++,fbId:genId(),table:currentOrder.table,name:currentOrder.name,waiter:currentWaiter,items:items,paid:false,ts:Date.now()};
-  state.orders.push(order);saveLocal();sendToPrinters(order);pushOrder(order);
-  notify('Bestelling verstuurd ✓');go('s-orders');
-}
-
-// ── PRINT ─────────────────────────────────────────────────
-function sendToPrinters(order){
-  // group items by category, then send to each printer linked to that category
-  var printed={};
-  order.items.forEach(function(item){
-    var cat=getCat(item.cat);
-    if(!cat||!cat.printers) return;
-    cat.printers.forEach(function(pid){
-      if(!printed[pid]) printed[pid]=[];
-      printed[pid].push(item);
-    });
-  });
-  Object.keys(printed).forEach(function(pid){
-    var printer=state.printers.find(function(p){return p.id===pid;});
-    if(!printer) return;
-    var ticket=buildTicket(order,printed[pid],printer.name);
-    console.log('[PRINTER:'+printer.name+(printer.ip?' @ '+printer.ip:'')+' ('+pid+')]\n'+ticket);
-  });
-}
-
-function buildTicket(order,items,printerName){
-  var time=new Date().toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
-  var lines='================================\n'+printerName.toUpperCase()+' - '+time+'\n';
-  lines+='Tafel '+order.table+' | '+order.name+'\nOpnemer: '+(order.waiter||'—')+'\n================================\n';
-  items.forEach(function(i){
-    lines+=i.qty+'x  '+i.name+'\n';
-    if(i.variation) lines+='     > '+i.variation+'\n';
-    if(i.comment) lines+='     * '+i.comment+'\n';
-  });
-  return lines+'================================';
-}
-
-function buildReceipt(table,name){
-  var orders=state.orders.filter(function(o){return o.table==table&&o.name===name;});
-  var items=orders.reduce(function(a,o){return a.concat(o.items);},[]); 
-  var now=new Date();
-  var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
-  var waiters=[];orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
-  var lines='================================\nPOPUP RESTAURANT\n';
-  lines+=now.toLocaleDateString('nl-BE')+' - '+now.toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'})+'\n';
-  lines+='Tafel '+table+' | '+name+'\n================================\n';
-  items.forEach(function(i){
-    var pad=i.name.length<18?i.name+' '.repeat(18-i.name.length):i.name.slice(0,18);
-    lines+=i.qty+'x '+pad+' €'+(i.price*i.qty).toFixed(2)+'\n';
-    if(i.variation) lines+='   > '+i.variation+'\n';
-    if(i.comment) lines+='   * '+i.comment+'\n';
-  });
-  lines+='--------------------------------\nTOTAAL:              €'+total.toFixed(2)+'\n================================\nBedankt voor uw bezoek!\n================================';
-  return lines;
-}
-
-function openBill(table,name){
-  document.getElementById('bill-back').onclick=function(){go('s-order-detail');renderDetail(table,name);};
-  var receipt=buildReceipt(table,name);
-  var billPrinter=state.printers.find(function(p){return p.isBill;});
-  var ip=billPrinter?billPrinter.ip:'';
-  var html='<div class="card" style="font-family:monospace;font-size:13px;white-space:pre-wrap;background:#fafafa">'+receipt+'</div>';
-  html+='<div style="margin-top:8px;font-size:12px;color:#888;text-align:center">Printer: '+(billPrinter?billPrinter.name+(ip?' ('+ip+')':''):'Niet geconfigureerd')+'</div>';
-  html+='<button class="btn btn-success" style="margin-top:12px" onclick="printBill(\''+esc(table)+'\',\''+esc(name)+'\')">🖨️ Afdrukken naar kassa</button>';
-  html+='<button class="btn btn-primary" style="margin-top:8px" onclick="markPaid(\''+esc(table)+'\',\''+esc(name)+'\')">✓ Markeer als betaald</button>';
-  html+='<button class="btn btn-secondary" style="margin-top:8px" onclick="window.print()">🖨️ Afdrukken via browser</button>';
-  document.getElementById('bill-content').innerHTML=html;
-  go('s-bill');
-}
-function printBill(table,name){
-  var bp=state.printers.find(function(p){return p.isBill;});
-  console.log('[PRINTER:KASSA'+(bp&&bp.ip?' @ '+bp.ip:'')+'\n'+buildReceipt(table,name));
-  notify(bp&&bp.ip?'Rekening verstuurd naar '+bp.ip:'Geen kassa-printer geconfigureerd');
-}
-function markPaid(table,name){
-  var paidTs=Date.now();
-  state.orders.filter(function(o){return o.table==table&&o.name===name;}).forEach(function(o){
-    o.paid=true;
-    o.paidTs=paidTs;
-    pushOrderUpdate(o);
-  });
-  saveLocal();notify('Gemarkeerd als betaald ✓');go('s-orders');
-}
-
-// ── SERVED ────────────────────────────────────────────────
-function openServed(table,name){
-  var orders=state.orders.filter(function(o){return o.table==table&&o.name===name&&!o.paid;});
-  var items=orders.reduce(function(a,o){return a.concat(o.items.map(function(i){return Object.assign({},i,{orderId:o.id});}));},[]); 
-  var html='';
-  items.forEach(function(i,idx){
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0">';
-    html+='<div class="schk '+(i.served?'done':'')+'" id="sc-'+idx+'" onclick="togServed('+idx+')">'+(i.served?'✓':'')+'</div>';
-    html+='<div style="flex:1"><div>'+i.qty+'× '+i.name+'</div>';
-    if(i.variation) html+='<div style="font-size:12px;color:#2563eb">› '+i.variation+'</div>';
-    if(i.comment) html+='<div style="font-size:12px;color:#555;font-style:italic">💬 '+i.comment+'</div>';
-    html+='</div>'+catBadge(i.cat)+'</div>';
-  });
-  document.getElementById('served-list').innerHTML=html;
-  servedData={table:table,name:name,items:items};
-  om('m-served');
-}
-function togServed(idx){
-  var el=document.getElementById('sc-'+idx);var done=el.classList.contains('done');
-  el.classList.toggle('done',!done);el.textContent=done?'':'✓';servedData.items[idx].served=!done;
-}
-function saveServed(){
-  if(!servedData) return;
-  var t=servedData.table,n=servedData.name,items=servedData.items,idx=0;
-  state.orders.filter(function(o){return o.table==t&&o.name===n&&!o.paid;}).forEach(function(o){
-    o.items.forEach(function(item){if(items[idx]!==undefined)item.served=items[idx].served;idx++;});
-    pushOrderUpdate(o);
-  });
-  saveLocal();cm('m-served');renderDetail(t,n);notify('Geserveerd status bijgewerkt');
-}
-
-// ── SPLIT ─────────────────────────────────────────────────
-function openSplit(){
-  var groups={};
-  state.orders.filter(function(o){return !o.paid;}).forEach(function(o){var k=o.table+'__'+o.name;groups[k]={table:o.table,name:o.name};});
-  var html='';
-  Object.values(groups).forEach(function(g){
-    html+='<div class="tcard" style="margin-bottom:8px" onclick="selectSplit(\''+esc(String(g.table))+'\',\''+esc(g.name)+'\')">';
-    html+='<div class="tavatar">'+initials(g.name)+'</div>';
-    html+='<div style="flex:1"><div style="font-weight:600">Tafel '+g.table+' — '+g.name+'</div></div>';
-    html+='<div style="color:#2563eb;font-size:14px;font-weight:600">Selecteer</div></div>';
-  });
-  document.getElementById('split-list').innerHTML=html||'<p style="color:#888;font-size:14px">Geen open tafels</p>';
-  om('m-split');
-}
-function selectSplit(table,name){cm('m-split');currentOrder={table:table,name:name};basket={};renderMenuScreen();go('s-menu');}
-function createSplit(){
-  var table=document.getElementById('split-table').value.trim();var name=document.getElementById('split-name').value.trim();
-  if(!table||!name){notify('Vul tafel en naam in');return;}
-  cm('m-split');currentOrder={table:table,name:name};basket={};renderMenuScreen();go('s-menu');
-}
-
-// ── HISTORIEK ─────────────────────────────────────────────
-function renderHistory(){
-  var el=document.getElementById('history-content');
-  var paid=state.orders.filter(function(o){return o.paid;});
-  if(!paid.length){el.innerHTML='<div class="empty"><div style="font-size:48px">🕐</div><div>Nog geen afgeronde bestellingen</div></div>';return;}
-  var groups={};
-  paid.forEach(function(o){var k=o.table+'__'+o.name;if(!groups[k])groups[k]={table:o.table,name:o.name,orders:[],lastTs:0};groups[k].orders.push(o);if(o.ts>groups[k].lastTs)groups[k].lastTs=o.ts;});
-  var sorted=Object.values(groups).sort(function(a,b){return b.lastTs-a.lastTs;});
-  var grandTotal=paid.reduce(function(s,o){return s+o.items.reduce(function(ss,i){return ss+i.price*i.qty;},0);},0);
-  var html='<div class="card" style="background:#f0fdf4;border-color:#bbf7d0;margin-bottom:16px">';
-  html+='<div style="display:flex;justify-content:space-between;align-items:center">';
-  html+='<div><div style="font-size:13px;color:#555">Totale omzet</div><div style="font-size:24px;font-weight:700;color:#16a34a">€'+grandTotal.toFixed(2)+'</div></div>';
-  html+='<div style="text-align:right"><div style="font-size:13px;color:#555">Tafels betaald</div><div style="font-size:24px;font-weight:700">'+sorted.length+'</div></div>';
-  html+='</div></div>';
-  sorted.forEach(function(g){
-    var items=g.orders.reduce(function(a,o){return a.concat(o.items);},[]); 
-    var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
-    var time=new Date(g.lastTs).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
-    var waiters=[];g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
-    html+='<div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
-    html+='<div class="tavatar" style="background:#f0fdf4;color:#16a34a">'+initials(g.name)+'</div>';
-    html+='<div style="flex:1"><div style="font-weight:600">Tafel '+g.table+' — '+g.name+'</div>';
-    html+='<div style="font-size:12px;color:#888">Betaald om '+time+'</div>';
-    if(waiters.length) html+='<div style="margin-top:2px"><span class="waiter-tag">👤 '+waiters.join(', ')+'</span></div>';
-    html+='</div><div style="font-weight:700;color:#16a34a">€'+total.toFixed(2)+'</div></div>';
-    html+='<div style="border-top:1px solid #f0f0f0;padding-top:8px">';
-    items.forEach(function(i){
-      html+='<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0"><span style="color:#555">'+i.qty+'× '+i.name;
-      if(i.variation) html+=' <span style="color:#2563eb">› '+i.variation+'</span>';
-      if(i.comment) html+=' <span style="color:#888;font-style:italic">· '+i.comment+'</span>';
-      html+='</span><span>€'+(i.price*i.qty).toFixed(2)+'</span></div>';
-    });
-    html+='</div><button class="btn btn-secondary btn-sm" style="margin-top:10px" onclick="reprintBill(\''+esc(String(g.table))+'\',\''+esc(g.name)+'\')">🖨️ Herdruk rekening</button></div>';
-  });
-  el.innerHTML=html;
-}
-function reprintBill(table,name){var bp=state.printers.find(function(p){return p.isBill;});console.log('[PRINTER:KASSA'+(bp&&bp.ip?' @ '+bp.ip:'')+'\n'+buildReceipt(table,name));notify(bp&&bp.ip?'Rekening hergedrukt naar '+bp.ip:'Geen kassa-printer geconfigureerd');}
-function clearHistory(){
-  if(!confirm('Alle betaalde bestellingen wissen?')) return;
-  state.orders=state.orders.filter(function(o){return !o.paid;});
-  clearRemoteHistory();saveLocal();renderHistory();notify('Historiek gewist');
-}
-
-// ── MENU BROWSE ───────────────────────────────────────────
-function renderMenuBrowse(){
-  var html='';
-  state.categories.forEach(function(cat){
-    var items=state.menu.filter(function(i){return i.cat===cat.id;});
-    if(!items.length) return;
-    var col=catColor(cat.id);
-    html+='<div class="menu-cat"><h3 style="color:'+col.text+'">'+cat.name+'</h3>';
-    items.forEach(function(i){
-      html+='<div class="mitem"><div style="flex:1"><div style="font-size:15px;font-weight:500">'+i.name+'</div>';
-      html+='<div style="font-size:13px;color:#555">€'+i.price.toFixed(2);
-      if(i.vars&&i.vars.length) html+=' <span style="color:#aaa;font-size:11px">· '+i.vars.join(', ')+'</span>';
-      html+='</div></div>'+catBadge(cat.id)+'</div>';
-    });
-    html+='</div>';
-  });
-  document.getElementById('menu-browse-content').innerHTML=html;
-}
-
-// ── ADMIN: PRINTERS ───────────────────────────────────────
-function renderPrinters(){
-  var html='';
-  state.printers.forEach(function(p){
-    html+='<div class="cat-row">';
-    html+='<div style="flex:1"><div style="font-weight:500">'+p.name+'</div>';
-    html+='<div style="font-size:12px;color:#888">'+(p.ip||'Geen IP')+(p.isBill?' · <span style="color:#6b21a8">Kassaprinter</span>':'')+'</div></div>';
-    html+='<button class="btn btn-secondary btn-sm" style="margin-right:6px" onclick="openEditPrinter(\''+esc(p.id)+'\')">✎</button>';
-    html+='<button class="btn btn-danger btn-sm" onclick="delPrinter(\''+esc(p.id)+'\')">✕</button></div>';
-  });
-  document.getElementById('printer-list').innerHTML=html||'<p style="color:#888;font-size:14px">Geen printers</p>';
-}
-
-function openAddPrinter(){
-  editPrinterId=null;newPrinterIsBill=false;
-  document.getElementById('m-printer-title').textContent='Printer toevoegen';
-  document.getElementById('p-name').value='';document.getElementById('p-ip').value='';
-  updBillBtns(false);om('m-add-printer');
-}
-function openEditPrinter(id){
-  var p=state.printers.find(function(x){return x.id===id;});if(!p) return;
-  editPrinterId=id;newPrinterIsBill=p.isBill;
-  document.getElementById('m-printer-title').textContent='Printer bewerken';
-  document.getElementById('p-name').value=p.name;document.getElementById('p-ip').value=p.ip||'';
-  updBillBtns(p.isBill);om('m-add-printer');
-}
-function setBillPrinter(val){newPrinterIsBill=val;updBillBtns(val);}
-function updBillBtns(val){
-  document.getElementById('p-bill-yes').className='btn btn-sm '+(val?'btn-primary':'btn-secondary');
-  document.getElementById('p-bill-no').className='btn btn-sm '+(val?'btn-secondary':'btn-primary');
-}
-function savePrinter(){
-  var name=document.getElementById('p-name').value.trim();var ip=document.getElementById('p-ip').value.trim();
-  if(!name){notify('Vul een naam in');return;}
-  if(newPrinterIsBill) state.printers.forEach(function(p){p.isBill=false;});
-  if(editPrinterId){
-    var p=state.printers.find(function(x){return x.id===editPrinterId;});
-    if(p){p.name=name;p.ip=ip;p.isBill=newPrinterIsBill;}
-  } else {
-    state.printers.push({id:'p'+state.nextPid++,name:name,ip:ip,isBill:newPrinterIsBill});
-  }
-  saveLocal();cm('m-add-printer');renderPrinters();notify('Printer opgeslagen ✓');
-}
-function delPrinter(id){
-  state.printers=state.printers.filter(function(p){return p.id!==id;});
-  // remove from category mappings
-  state.categories.forEach(function(c){c.printers=c.printers.filter(function(pid){return pid!==id;});});
-  saveLocal();renderPrinters();renderCats();notify('Printer verwijderd');
-}
-
-// ── ADMIN: CATEGORIEËN ────────────────────────────────────
-function renderCats(){
-  var html='';
-  state.categories.forEach(function(cat){
-    var col=catColor(cat.id);
-    html+='<div class="cat-row">';
-    html+='<span style="width:12px;height:12px;border-radius:50%;background:'+col.bg+';border:2px solid '+col.text+';display:inline-block;flex-shrink:0"></span>';
-    html+='<div style="flex:1;margin-left:6px"><div style="font-weight:500">'+cat.name+'</div>';
-    html+='<div style="font-size:12px;color:#888">Printers: '+catPrinterNames(cat)+'</div></div>';
-    html+='<button class="btn btn-secondary btn-sm" style="margin-right:6px" onclick="openEditCat(\''+esc(cat.id)+'\')">✎</button>';
-    html+='<button class="btn btn-danger btn-sm" onclick="delCat(\''+esc(cat.id)+'\')">✕</button></div>';
-  });
-  document.getElementById('cat-list').innerHTML=html||'<p style="color:#888;font-size:14px">Geen categorieën</p>';
-}
-
-function buildColorPicker(selected){
-  var html='';
-  CAT_COLORS.forEach(function(c){
-    var active=c.id===selected;
-    html+='<div onclick="selColor(\''+c.id+'\')" id="clr-'+c.id+'" style="width:32px;height:32px;border-radius:50%;background:'+c.bg+';border:3px solid '+(active?c.text:'transparent')+';cursor:pointer;display:flex;align-items:center;justify-content:center;" title="'+c.label+'">';
-    html+=active?'<span style="color:'+c.text+';font-size:14px">✓</span>':'';
-    html+='</div>';
-  });
-  return html;
-}
-function selColor(id){
-  selectedColor=id;
-  document.getElementById('c-color-picker').innerHTML=buildColorPicker(id);
-}
-
-function buildPrinterCheckList(selected){
-  var html='';
-  if(!state.printers.length){html='<p style="font-size:13px;color:#aaa">Voeg eerst printers toe</p>';return html;}
-  state.printers.forEach(function(p){
-    var on=selected.indexOf(p.id)!==-1;
-    html+='<div class="printer-chk" onclick="togCatPrinter(\''+esc(p.id)+'\')">';
-    html+='<div class="chkbox '+(on?'on':'')+'" id="pchk-'+p.id+'">'+(on?'✓':'')+'</div>';
-    html+='<div><div style="font-size:14px;font-weight:500">'+p.name+'</div>';
-    html+='<div style="font-size:12px;color:#888">'+(p.ip||'Geen IP')+(p.isBill?' · Kassaprinter':'')+'</div></div></div>';
-  });
-  return html;
-}
-function togCatPrinter(pid){
-  var idx=selectedCatPrinters.indexOf(pid);
-  if(idx===-1) selectedCatPrinters.push(pid); else selectedCatPrinters.splice(idx,1);
-  var el=document.getElementById('pchk-'+pid);
-  if(el){var on=selectedCatPrinters.indexOf(pid)!==-1;el.className='chkbox '+(on?'on':'');el.textContent=on?'✓':'';}
-}
-
-function openAddCat(){
-  editCatId=null;selectedColor='blue';selectedCatPrinters=[];
-  document.getElementById('m-cat-title').textContent='Categorie toevoegen';
-  document.getElementById('c-name').value='';
-  document.getElementById('c-color-picker').innerHTML=buildColorPicker('blue');
-  document.getElementById('c-printer-list').innerHTML=buildPrinterCheckList([]);
-  om('m-add-cat');
-}
-function openEditCat(id){
-  var cat=getCat(id);if(!cat) return;
-  editCatId=id;selectedColor=cat.color||'blue';selectedCatPrinters=cat.printers?cat.printers.slice():[];
-  document.getElementById('m-cat-title').textContent='Categorie bewerken';
-  document.getElementById('c-name').value=cat.name;
-  document.getElementById('c-color-picker').innerHTML=buildColorPicker(selectedColor);
-  document.getElementById('c-printer-list').innerHTML=buildPrinterCheckList(selectedCatPrinters);
-  om('m-add-cat');
-}
-function saveCat(){
-  var name=document.getElementById('c-name').value.trim();
-  if(!name){notify('Vul een naam in');return;}
-  if(editCatId){
-    var cat=getCat(editCatId);
-    if(cat){cat.name=name;cat.color=selectedColor;cat.printers=selectedCatPrinters.slice();}
-  } else {
-    var newId='cat'+state.nextCid++;
-    state.categories.push({id:newId,name:name,color:selectedColor,printers:selectedCatPrinters.slice()});
-  }
-  saveLocal();cm('m-add-cat');renderCats();notify('Categorie opgeslagen ✓');
-}
-function delCat(id){
-  if(!confirm('Categorie verwijderen? Menu-items in deze categorie worden "Overige".')) return;
-  state.categories=state.categories.filter(function(c){return c.id!==id;});
-  saveLocal();renderCats();renderAdminMenu();notify('Categorie verwijderd');
-}
-
-// ── ADMIN: STAFF ──────────────────────────────────────────
-function renderStaff(){
-  var html='';
-  state.staff.forEach(function(s,idx){
-    html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0f0f0">';
-    html+='<div style="flex:1"><div style="font-weight:500">'+s.name+'</div>';
-    html+='<div style="font-size:12px;color:#888">PIN: '+s.pin+(s.isAdmin?' · Admin':'')+'</div></div>';
-    if(!s.isAdmin) html+='<button class="btn btn-danger btn-sm" onclick="delStaff('+idx+')">✕</button>';
-    html+='</div>';
-  });
-  document.getElementById('staff-list').innerHTML=html;
-}
-function addStaff(){
-  var name=document.getElementById('staff-name').value.trim();var pin=document.getElementById('staff-pin').value.trim();
-  if(!name||!pin){notify('Vul naam en PIN in');return;}
-  if(state.staff.find(function(s){return s.pin===pin;})){notify('PIN al in gebruik');return;}
-  state.staff.push({name:name,pin:pin});saveLocal();renderStaff();
-  document.getElementById('staff-name').value='';document.getElementById('staff-pin').value='';
-  notify('Medewerker toegevoegd ✓');
-}
-function delStaff(idx){state.staff.splice(idx,1);saveLocal();renderStaff();}
-
-// ── ADMIN: MENU ───────────────────────────────────────────
-function renderAdminMenu(){
-  var html='';
-  state.menu.forEach(function(i){
-    html+='<div style="display:flex;align-items:center;background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #e5e5e5;gap:10px">';
-    html+='<div style="flex:1"><div style="font-size:15px;font-weight:500">'+i.name+'</div>';
-    html+='<div style="font-size:12px;color:#888;margin-top:2px">€'+i.price.toFixed(2)+' · '+catBadge(i.cat);
-    if(i.vars&&i.vars.length) html+=' · '+i.vars.join(', ');
-    html+='</div></div>';
-    html+='<button class="btn btn-secondary btn-sm" style="margin-right:6px" onclick="openEditItem('+i.id+')">✎</button>';
-    html+='<button class="btn btn-danger btn-sm" onclick="delItem('+i.id+')">✕</button></div>';
-  });
-  document.getElementById('admin-menu').innerHTML=html||'<p style="color:#888;font-size:14px">Geen items</p>';
-}
-
-function buildCatSelect(selected){
-  var html='';
-  state.categories.forEach(function(c){html+='<option value="'+c.id+'"'+(c.id===selected?' selected':'')+'>'+c.name+'</option>';});
-  return html;
-}
-function openAddItem(){
-  editItemId=null;
-  document.getElementById('m-item-admin-title').textContent='Menu item toevoegen';
-  document.getElementById('a-name').value='';document.getElementById('a-price').value='';document.getElementById('a-vars').value='';
-  document.getElementById('a-cat').innerHTML=buildCatSelect(state.categories.length?state.categories[0].id:'');
-  om('m-add-item');
-}
-function openEditItem(id){
-  var item=state.menu.find(function(i){return i.id===id;});if(!item) return;
-  editItemId=id;
-  document.getElementById('m-item-admin-title').textContent='Menu item bewerken';
-  document.getElementById('a-name').value=item.name;document.getElementById('a-price').value=item.price;
-  document.getElementById('a-vars').value=item.vars?item.vars.join(', '):'';
-  document.getElementById('a-cat').innerHTML=buildCatSelect(item.cat);
-  om('m-add-item');
-}
-function saveItem(){
-  var name=document.getElementById('a-name').value.trim();var price=parseFloat(document.getElementById('a-price').value);
-  var cat=document.getElementById('a-cat').value;var varStr=document.getElementById('a-vars').value.trim();
-  var vars=varStr?varStr.split(',').map(function(v){return v.trim();}).filter(Boolean):[];
-  if(!name||isNaN(price)){notify('Vul alle velden in');return;}
-  if(editItemId){
-    var item=state.menu.find(function(i){return i.id===editItemId;});
-    if(item){item.name=name;item.price=price;item.cat=cat;item.vars=vars;}
-  } else {
-    state.menu.push({id:state.nextMid++,name:name,price:price,cat:cat,vars:vars});
-  }
-  saveLocal();cm('m-add-item');renderAdminMenu();notify('Item opgeslagen ✓');
-}
-function delItem(id){state.menu=state.menu.filter(function(i){return i.id!==id;});saveLocal();renderAdminMenu();notify('Item verwijderd');}
-
-function savePrinter(){
-  var name=document.getElementById('p-name').value.trim();var ip=document.getElementById('p-ip').value.trim();
-  if(!name){notify('Vul een naam in');return;}
-  if(newPrinterIsBill) state.printers.forEach(function(p){p.isBill=false;});
-  if(editPrinterId){
-    var p=state.printers.find(function(x){return x.id===editPrinterId;});
-    if(p){p.name=name;p.ip=ip;p.isBill=newPrinterIsBill;}
-  } else {
-    state.printers.push({id:'p'+state.nextPid++,name:name,ip:ip,isBill:newPrinterIsBill});
-  }
-  saveLocal();pushSettings();cm('m-add-printer');renderPrinters();notify('Printer opgeslagen ✓');
-}
-function delPrinter(id){
-  state.printers=state.printers.filter(function(p){return p.id!==id;});
-  state.categories.forEach(function(c){c.printers=c.printers.filter(function(pid){return pid!==id;});});
-  saveLocal();pushSettings();renderPrinters();renderCats();notify('Printer verwijderd');
-}
-function saveCat(){
-  var name=document.getElementById('c-name').value.trim();
-  if(!name){notify('Vul een naam in');return;}
-  if(editCatId){
-    var cat=getCat(editCatId);
-    if(cat){cat.name=name;cat.color=selectedColor;cat.printers=selectedCatPrinters.slice();}
-  } else {
-    var newId='cat'+state.nextCid++;
-    state.categories.push({id:newId,name:name,color:selectedColor,printers:selectedCatPrinters.slice()});
-  }
-  saveLocal();pushSettings();cm('m-add-cat');renderCats();notify('Categorie opgeslagen ✓');
-}
-function delCat(id){
-  if(!confirm('Categorie verwijderen? Menu-items in deze categorie worden "Overige".')) return;
-  state.categories=state.categories.filter(function(c){return c.id!==id;});
-  saveLocal();pushSettings();renderCats();renderAdminMenu();notify('Categorie verwijderd');
-}
-function addStaff(){
-  var name=document.getElementById('staff-name').value.trim();var pin=document.getElementById('staff-pin').value.trim();
-  if(!name||!pin){notify('Vul naam en PIN in');return;}
-  if(state.staff.find(function(s){return s.pin===pin;})){notify('PIN al in gebruik');return;}
-  state.staff.push({name:name,pin:pin});saveLocal();pushSettings();renderStaff();
-  document.getElementById('staff-name').value='';document.getElementById('staff-pin').value='';
-  notify('Medewerker toegevoegd ✓');
-}
-function delStaff(idx){state.staff.splice(idx,1);saveLocal();pushSettings();renderStaff();}
-function saveItem(){
-  var name=document.getElementById('a-name').value.trim();var price=parseFloat(document.getElementById('a-price').value);
-  var cat=document.getElementById('a-cat').value;var varStr=document.getElementById('a-vars').value.trim();
-  var vars=varStr?varStr.split(',').map(function(v){return v.trim();}).filter(Boolean):[];
-  if(!name||isNaN(price)){notify('Vul alle velden in');return;}
-  if(editItemId){
-    var item=state.menu.find(function(i){return i.id===editItemId;});
-    if(item){item.name=name;item.price=price;item.cat=cat;item.vars=vars;}
-  } else {
-    state.menu.push({id:state.nextMid++,name:name,price:price,cat:cat,vars:vars});
-  }
-  saveLocal();pushSettings();cm('m-add-item');renderAdminMenu();notify('Item opgeslagen ✓');
-}
-function delItem(id){state.menu=state.menu.filter(function(i){return i.id!==id;});saveLocal();pushSettings();renderAdminMenu();notify('Item verwijderd');}
 
 function saveFbUrl(){
   var url=document.getElementById('fb-url').value.trim();
-  state.fbUrl=url;saveLocal();
-  if(url){
-    initFirebase(url);
-    // direct settings ophalen en admin opnieuw renderen
-    fetchSettings(function(){
-      renderAdminMenu();renderPrinters();renderCats();renderStaff();
-      notify('Firebase verbonden — instellingen opgehaald');
+  state.fbUrl=url.replace(/\/$/,'');
+  localStorage.setItem('admin-fb-url', state.fbUrl);
+  if(state.fbUrl) startPolling();
+  notify('Firebase URL opgeslagen');
+}
+
+// ── RENDER ALL ────────────────────────────────────────────
+function renderAll(){
+  renderKpis();
+  renderOrdersList();
+  renderHistoryStats();
+  renderHistoryTable();
+  renderMenuTable();
+  renderCatTable();
+  renderPrinterTable();
+  renderTablesList();
+  renderStaffTable();
+  renderStats();
+  renderPaymentMethods();
+  if(selectedGroupKey) renderDetailPanel();
+  var sa=document.getElementById('settings-active-count');
+  if(sa) sa.textContent=state.orders.filter(function(o){return !o.paid;}).length;
+}
+
+function renderPaymentMethods(){
+  var el=document.getElementById('pm-input');
+  if(el && document.activeElement!==el) el.value=(state.paymentMethods||[]).join('\n');
+}
+
+function savePaymentMethods(){
+  var raw=document.getElementById('pm-input').value;
+  var arr=raw.split(/[\n,]/).map(function(s){return s.trim();}).filter(Boolean);
+  state.paymentMethods=arr;
+  pushSettings();
+  notify('Betaalwijzen opgeslagen ✓ ('+arr.length+')');
+}
+
+function showPage(id, navEl){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+  if(navEl) navEl.classList.add('active');
+  renderAll();
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+function getGroups(paidFilter){
+  var groups={};
+  state.orders.filter(function(o){return paidFilter===undefined?true:o.paid===paidFilter;}).forEach(function(o){
+    var k=o.table+'__'+o.name;
+    if(!groups[k]) groups[k]={table:o.table,name:o.name,orders:[],lastTs:0};
+    groups[k].orders.push(o);
+    if(o.ts>groups[k].lastTs) groups[k].lastTs=o.ts;
+  });
+  return Object.values(groups);
+}
+
+function catColorById(id){
+  var cat=state.categories.find(function(c){return c.id===id;});
+  if(!cat) return {bg:'#e5e5e5',text:'#555'};
+  var col=CAT_COLORS.find(function(x){return x.id===cat.color;});
+  return col||{bg:'#e5e5e5',text:'#555'};
+}
+function catNameById(id){
+  var cat=state.categories.find(function(c){return c.id===id;});
+  return cat?cat.name:'—';
+}
+function initials(name){return (name||'?').split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();}
+
+// ── KPIs ──────────────────────────────────────────────────
+function renderKpis(){
+  var active=getGroups(false);
+  var allItems=state.orders.filter(function(o){return !o.paid;}).reduce(function(a,o){return a.concat(o.items);},[]);
+  var queue=allItems.filter(function(i){return !i.served;}).reduce(function(s,i){return s+i.qty;},0);
+  var served=allItems.filter(function(i){return i.served;}).reduce(function(s,i){return s+i.qty;},0);
+  var revenue=state.orders.filter(function(o){return o.paid;}).reduce(function(s,o){return s+o.items.reduce(function(ss,i){return ss+i.price*i.qty;},0);},0);
+  document.getElementById('kpi-open').textContent=active.length;
+  document.getElementById('kpi-queue').textContent=queue;
+  document.getElementById('kpi-served').textContent=served;
+  document.getElementById('kpi-revenue').textContent='€'+revenue.toFixed(2);
+}
+
+// ── ORDERS LIST ───────────────────────────────────────────
+function setFilter(f, btn){
+  activeFilter=f;
+  document.querySelectorAll('.filter-tab').forEach(function(b){b.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  renderOrdersList();
+}
+
+function renderOrdersList(){
+  var el=document.getElementById('orders-list');
+  var active=getGroups(false);
+  var filtered=active.filter(function(g){
+    var items=g.orders.reduce(function(a,o){return a.concat(o.items);},[]);
+    var allServed=items.length>0&&items.every(function(i){return i.served;});
+    var anyServed=items.some(function(i){return i.served;});
+    if(activeFilter==='open') return !anyServed;
+    if(activeFilter==='served') return allServed;
+    return true;
+  }).sort(function(a,b){return b.lastTs-a.lastTs;});
+
+  if(!filtered.length){el.innerHTML='<div class="empty-table">Geen actieve orders</div>';return;}
+  var html='';
+  filtered.forEach(function(g){
+    var items=g.orders.reduce(function(a,o){return a.concat(o.items);},[]);
+    var allServed=items.length>0&&items.every(function(i){return i.served;});
+    var anyServed=items.some(function(i){return i.served;});
+    var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
+    var waiters=[];g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
+    var k=g.table+'__'+g.name;
+    var status=allServed?'<span class="status status-served">✓ Geserveerd</span>':anyServed?'<span class="status status-partial">⏳ Bezig</span>':'<span class="status status-open">● Open</span>';
+    var sel=selectedGroupKey===k?' selected':'';
+    html+='<div class="order-row'+sel+'" onclick="selectGroup(\''+esc(k)+'\')">';
+    html+='<div class="order-avatar">'+initials(g.name)+'</div>';
+    html+='<div class="order-info"><div class="order-title">Tafel '+g.table+' — '+g.name+'</div>';
+    html+='<div class="order-meta">'+status+'<span>€'+total.toFixed(2)+'</span>';
+    if(waiters.length) html+='<span class="waiter-tag">👤 '+waiters.join(', ')+'</span>';
+    html+='</div></div></div>';
+  });
+  el.innerHTML=html;
+}
+
+function selectGroup(k){
+  selectedGroupKey=k;
+  renderOrdersList();
+  renderDetailPanel();
+}
+
+function renderDetailPanel(){
+  var el=document.getElementById('detail-panel');
+  if(!selectedGroupKey){el.innerHTML='';return;}
+  var parts=selectedGroupKey.split('__');var table=parts[0];var name=parts.slice(1).join('__');
+  var orders=state.orders.filter(function(o){return o.table==table&&o.name===name&&!o.paid;});
+  if(!orders.length){
+    selectedGroupKey=null;
+    el.innerHTML='<div class="card"><div class="card-body"><div class="detail-empty"><div class="icon">✅</div><div>Geen actieve orders</div></div></div></div>';
+    return;
+  }
+  var allItems=orders.reduce(function(a,o){return a.concat(o.items);},[]);
+  var total=allItems.reduce(function(s,i){return s+i.price*i.qty;},0);
+  var html='<div class="card"><div class="card-header"><span class="card-title">Tafel '+table+' — '+name+'</span><span style="font-size:13px;font-weight:700">€'+total.toFixed(2)+'</span></div><div class="card-body">';
+  orders.forEach(function(o,oidx){
+    var time=new Date(o.ts).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
+    html+='<div class="round-header"><span>Ronde '+(oidx+1)+' — '+time+'</span><span class="waiter-tag">👤 '+(o.waiter||'—')+'</span></div>';
+    o.items.forEach(function(i,iidx){
+      var col=catColorById(i.cat);
+      html+='<div class="detail-item">';
+      html+='<div class="served-tick '+(i.served?'on':'')+'" onclick="toggleItemServed(\''+esc(o.fbId||o.id)+'\','+iidx+')">'+(i.served?'✓':'')+'</div>';
+      html+='<div class="qty-pill">'+i.qty+'×</div>';
+      html+='<div style="flex:1"><div style="font-weight:500">'+i.name+'</div>';
+      if(i.variation) html+='<div style="font-size:12px;color:var(--primary)">› '+i.variation+'</div>';
+      if(i.comment) html+='<div style="font-size:12px;color:var(--text-muted);font-style:italic">💬 '+i.comment+'</div>';
+      html+='</div>';
+      html+='<span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(i.cat)+'</span>';
+      html+='<span style="font-weight:600">€'+(i.price*i.qty).toFixed(2)+'</span></div>';
     });
-  } else {
-    notify('Firebase URL gewist');
+  });
+  html+='<div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">';
+  html+='<button class="btn btn-secondary btn-sm" onclick="markAllServed(\''+esc(table)+'\',\''+esc(name)+'\')">✓ Alles geserveerd</button>';
+  html+='<button class="btn btn-success btn-sm" onclick="markPaid(\''+esc(table)+'\',\''+esc(name)+'\')">💶 Markeer betaald</button>';
+  html+='<button class="btn btn-danger btn-sm" onclick="deleteGroup(\''+esc(table)+'\',\''+esc(name)+'\')">🗑 Verwijder</button>';
+  html+='</div></div></div>';
+  el.innerHTML=html;
+}
+
+function toggleItemServed(orderId, itemIdx){
+  var order=state.orders.find(function(o){return (o.fbId||String(o.id))===orderId;});
+  if(!order) return;
+  order.items[itemIdx].served=!order.items[itemIdx].served;
+  if(state.fbUrl&&order.fbId) fbPut('/orders/'+order.fbId,order);
+  renderAll();
+}
+
+function markAllServed(table,name){
+  state.orders.filter(function(o){return o.table==table&&o.name===name&&!o.paid;}).forEach(function(o){
+    o.items.forEach(function(i){i.served=true;});
+    if(state.fbUrl&&o.fbId) fbPut('/orders/'+o.fbId,o);
+  });
+  notify('Alles geserveerd ✓');renderAll();
+}
+var pendingPayment = null;
+
+function markPaid(table,name){
+  pendingPayment={table:table, name:name};
+  var html='<div class="modal-header">Betaalwijze kiezen</div>';
+  html+='<p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Hoe is de rekening van tafel '+table+' (' + name + ') betaald?</p>';
+  html+='<div style="display:flex;flex-direction:column;gap:8px">';
+  (state.paymentMethods||['Cash']).forEach(function(m){
+    html+='<button class="btn btn-secondary" style="text-align:left;padding:14px;font-size:15px" onclick="confirmPayment(\''+esc(m)+'\')">'+m+'</button>';
+  });
+  html+='</div>';
+  html+='<div class="modal-footer"><button class="btn btn-ghost" onclick="cm(\'m-payment\')">Annuleer</button></div>';
+  var modal=document.getElementById('m-payment');
+  if(modal){
+    modal.querySelector('.modal').innerHTML=html;
+    om('m-payment');
   }
 }
 
-// Init bij start: als FB URL beschikbaar, start sync onmiddellijk
-if(state.fbUrl){
-  setTimeout(function(){
-    var el=document.getElementById('login-fb-url');
-    if(el) el.value=state.fbUrl;
-  },50);
-  initFirebase(state.fbUrl);
+function confirmPayment(method){
+  if(!pendingPayment) return;
+  var paidTs=Date.now();
+  state.orders.filter(function(o){return o.table==pendingPayment.table&&o.name===pendingPayment.name;}).forEach(function(o){
+    o.paid=true;
+    o.paidTs=paidTs;
+    o.paymentMethod=method;
+    if(state.fbUrl&&o.fbId) fbPut('/orders/'+o.fbId,o);
+  });
+  selectedGroupKey=null;
+  notify('Betaald via '+method+' ✓');
+  pendingPayment=null;
+  cm('m-payment');
+  renderAll();
 }
-// Toon eerst lokale medewerkers, sync zal ze updaten
-setTimeout(populateStaffSelect, 50);
+function deleteGroup(table,name){
+  if(!confirm('Alle orders voor tafel '+table+' verwijderen?')) return;
+  var toDelete=state.orders.filter(function(o){return o.table==table&&o.name===name;});
+  toDelete.forEach(function(o){if(state.fbUrl&&o.fbId) fbDel('/orders/'+o.fbId);});
+  state.orders=state.orders.filter(function(o){return !(o.table==table&&o.name===name);});
+  selectedGroupKey=null;notify('Orders verwijderd');renderAll();
+}
+
+// ── HISTORIEK ─────────────────────────────────────────────
+function renderHistoryStats(){
+  var paid=state.orders.filter(function(o){return o.paid;});
+  var groups=getGroups(true);
+  var items=paid.reduce(function(s,o){return s+o.items.reduce(function(ss,i){return ss+i.qty;},0);},0);
+  var total=paid.reduce(function(s,o){return s+o.items.reduce(function(ss,i){return ss+i.price*i.qty;},0);},0);
+  var avg=groups.length?total/groups.length:0;
+  var hc=document.getElementById('hist-count');if(hc)hc.textContent=groups.length;
+  var hi=document.getElementById('hist-items');if(hi)hi.textContent=items;
+  var ha=document.getElementById('hist-avg');if(ha)ha.textContent='€'+avg.toFixed(2);
+  var ht=document.getElementById('hist-total');if(ht)ht.textContent='€'+total.toFixed(2);
+
+  // Omzet per betaalwijze
+  var byPm={};
+  paid.forEach(function(o){
+    var method=o.paymentMethod||'Onbekend';
+    if(!byPm[method]) byPm[method]={qty:0,total:0};
+    byPm[method].qty+=1;
+    byPm[method].total+=o.items.reduce(function(s,i){return s+i.price*i.qty;},0);
+  });
+  var pmEl=document.getElementById('hist-payments');
+  if(pmEl){
+    var keys=Object.keys(byPm).sort(function(a,b){return byPm[b].total-byPm[a].total;});
+    if(!keys.length){pmEl.innerHTML='<div class="empty-table">Geen data</div>';}
+    else{
+      var maxTotal=Math.max.apply(null,keys.map(function(k){return byPm[k].total;}));
+      var html='<div style="display:flex;flex-direction:column;gap:8px;padding:16px">';
+      keys.forEach(function(k){
+        var pct=maxTotal?(byPm[k].total/maxTotal)*100:0;
+        var pctTotal=total?(byPm[k].total/total)*100:0;
+        html+='<div style="display:flex;align-items:center;gap:12px">';
+        html+='<div style="width:120px;font-size:13px;font-weight:600">'+k+'</div>';
+        html+='<div style="flex:1;background:#f1f5f9;border-radius:6px;height:28px;overflow:hidden;position:relative">';
+        html+='<div style="background:linear-gradient(90deg,#2563eb,#60a5fa);height:100%;width:'+pct+'%;border-radius:6px;display:flex;align-items:center;padding-left:10px;color:#fff;font-size:12px;font-weight:700">€'+byPm[k].total.toFixed(2)+'</div>';
+        html+='</div>';
+        html+='<div style="width:80px;text-align:right;font-size:12px;color:var(--text-muted)">'+byPm[k].qty+' × · '+pctTotal.toFixed(0)+'%</div>';
+        html+='</div>';
+      });
+      html+='</div>';
+      pmEl.innerHTML=html;
+    }
+  }
+}
+
+function renderHistoryTable(){
+  var el=document.getElementById('history-table');if(!el)return;
+  var groups=getGroups(true).sort(function(a,b){return b.lastTs-a.lastTs;});
+  if(!groups.length){el.innerHTML='<div class="empty-table">Geen afgesloten bestellingen</div>';return;}
+  var html='<table><thead><tr><th></th><th>Tafel</th><th>Naam</th><th>Items</th><th>Opnemer(s)</th><th>Geopend</th><th>Betaald</th><th>Duur</th><th>Wijze</th><th style="text-align:right">Totaal</th><th class="col-actions">Acties</th></tr></thead><tbody>';
+  groups.forEach(function(g){
+    var items=g.orders.reduce(function(a,o){return a.concat(o.items);},[]);
+    var qty=items.reduce(function(s,i){return s+i.qty;},0);
+    var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
+    var waiters=[];g.orders.forEach(function(o){if(o.waiter&&waiters.indexOf(o.waiter)===-1)waiters.push(o.waiter);});
+    var methods=[];g.orders.forEach(function(o){if(o.paymentMethod&&methods.indexOf(o.paymentMethod)===-1)methods.push(o.paymentMethod);});
+
+    var firstTs=Math.min.apply(null, g.orders.map(function(o){return o.ts||0;}));
+    var paidTs=g.orders.map(function(o){return o.paidTs;}).filter(Boolean);
+    var lastPaid=paidTs.length?Math.max.apply(null, paidTs):g.lastTs;
+
+    var openedDate=new Date(firstTs);
+    var paidDate=new Date(lastPaid);
+    var openedStr=openedDate.toLocaleString('nl-BE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    var paidStr=paidDate.toLocaleString('nl-BE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    var durMin=Math.round((lastPaid-firstTs)/60000);
+    var durStr=durMin>=60?Math.floor(durMin/60)+'u'+(durMin%60).toString().padStart(2,'0'):durMin+'m';
+
+    var k=g.table+'__'+g.name;
+    var expanded=expandedHistKeys[k];
+    html+='<tr style="cursor:pointer" onclick="toggleHistDetail(\''+esc(k)+'\')">';
+    html+='<td style="width:30px;color:var(--text-muted)">'+(expanded?'▼':'▶')+'</td>';
+    html+='<td><strong>'+g.table+'</strong></td><td>'+g.name+'</td><td>'+qty+'</td><td>'+waiters.join(', ')+'</td>';
+    html+='<td style="font-size:12px;color:var(--text-muted)">'+openedStr+'</td>';
+    html+='<td style="font-size:12px;color:var(--text-muted)">'+paidStr+'</td>';
+    html+='<td style="font-size:12px">'+durStr+'</td>';
+    html+='<td>'+(methods.length?'<span class="badge" style="background:#dbeafe;color:#1d4ed8">'+methods.join(', ')+'</span>':'<span style="color:var(--text-muted)">—</span>')+'</td>';
+    html+='<td style="text-align:right;font-weight:600">€'+total.toFixed(2)+'</td>';
+    html+='<td class="col-actions" onclick="event.stopPropagation()">';
+    html+='<button class="btn btn-secondary btn-sm" onclick="reopenAsServed(\''+esc(g.table)+'\',\''+esc(g.name)+'\')" title="Terugzetten naar geserveerd">↩ Geserveerd</button> ';
+    html+='<button class="btn btn-secondary btn-sm" onclick="reopenAsOpen(\''+esc(g.table)+'\',\''+esc(g.name)+'\')" title="Terugzetten naar open">↩ Open</button> ';
+    html+='<button class="btn btn-ghost btn-icon" onclick="deleteHistGroup(\''+esc(g.table)+'\',\''+esc(g.name)+'\')" title="Verwijderen" style="color:var(--danger)">✕</button>';
+    html+='</td></tr>';
+    if(expanded){
+      html+='<tr><td></td><td colspan="10" style="background:#fafbfc;padding:0">';
+      html+='<div style="padding:14px 18px">';
+      g.orders.forEach(function(o,oidx){
+        var oTime=new Date(o.ts).toLocaleTimeString('nl-BE',{hour:'2-digit',minute:'2-digit'});
+        html+='<div class="round-header"><span>Ronde '+(oidx+1)+' — '+oTime+'</span><span class="waiter-tag">👤 '+(o.waiter||'—')+'</span></div>';
+        o.items.forEach(function(i){
+          var col=catColorById(i.cat);
+          html+='<div class="detail-item">';
+          html+='<div class="qty-pill">'+i.qty+'×</div>';
+          html+='<div style="flex:1"><div style="font-weight:500">'+i.name+'</div>';
+          if(i.variation) html+='<div style="font-size:12px;color:var(--primary)">› '+i.variation+'</div>';
+          if(i.comment) html+='<div style="font-size:12px;color:var(--text-muted);font-style:italic">💬 '+i.comment+'</div>';
+          html+='</div>';
+          html+='<span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(i.cat)+'</span>';
+          html+='<span style="font-weight:600">€'+(i.price*i.qty).toFixed(2)+'</span></div>';
+        });
+      });
+      html+='</div></td></tr>';
+    }
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+function toggleHistDetail(k){
+  expandedHistKeys[k]=!expandedHistKeys[k];
+  renderHistoryTable();
+}
+
+function reopenAsServed(table, name){
+  if(!confirm('Tafel '+table+' terugzetten naar status "Geserveerd"?')) return;
+  state.orders.filter(function(o){return o.table==table&&o.name===name;}).forEach(function(o){
+    o.paid=false;
+    o.items.forEach(function(i){i.served=true;});
+    if(state.fbUrl&&o.fbId) fbPut('/orders/'+o.fbId,o);
+  });
+  notify('Tafel teruggezet naar "Geserveerd"');renderAll();
+}
+
+function reopenAsOpen(table, name){
+  if(!confirm('Tafel '+table+' terugzetten naar status "Open"?')) return;
+  state.orders.filter(function(o){return o.table==table&&o.name===name;}).forEach(function(o){
+    o.paid=false;
+    o.items.forEach(function(i){i.served=false;});
+    if(state.fbUrl&&o.fbId) fbPut('/orders/'+o.fbId,o);
+  });
+  notify('Tafel teruggezet naar "Open"');renderAll();
+}
+
+function deleteHistGroup(table, name){
+  if(!confirm('Bestelling van tafel '+table+' permanent verwijderen?')) return;
+  var toDelete=state.orders.filter(function(o){return o.table==table&&o.name===name;});
+  toDelete.forEach(function(o){if(state.fbUrl&&o.fbId) fbDel('/orders/'+o.fbId);});
+  state.orders=state.orders.filter(function(o){return !(o.table==table&&o.name===name);});
+  notify('Verwijderd');renderAll();
+}
+
+function clearHistory(){
+  if(!confirm('Alle betaalde bestellingen verwijderen?')) return;
+  var toDelete=state.orders.filter(function(o){return o.paid;});
+  toDelete.forEach(function(o){if(state.fbUrl&&o.fbId) fbDel('/orders/'+o.fbId);});
+  state.orders=state.orders.filter(function(o){return !o.paid;});
+  notify('Historiek gewist');renderAll();
+}
+
+// ── MENU ──────────────────────────────────────────────────
+function renderMenuTable(){
+  var el=document.getElementById('menu-table');if(!el)return;
+  if(!state.menu.length){el.innerHTML='<tr><td colspan="5" class="empty-table">Geen items</td></tr>';return;}
+  var html='';
+  state.menu.forEach(function(i){
+    var col=catColorById(i.cat);
+    html+='<tr><td><strong>'+i.name+'</strong></td><td>€'+i.price.toFixed(2)+'</td>';
+    html+='<td><span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(i.cat)+'</span></td>';
+    html+='<td style="color:var(--text-muted)">'+(i.vars&&i.vars.length?i.vars.join(', '):'—')+'</td>';
+    html+='<td class="col-actions"><button class="btn btn-ghost btn-icon" onclick="openItemModal('+i.id+')" title="Bewerken">✎</button> <button class="btn btn-ghost btn-icon" onclick="delItem('+i.id+')" title="Verwijderen" style="color:var(--danger)">✕</button></td></tr>';
+  });
+  el.innerHTML=html;
+}
+
+// ── CATEGORIEËN ───────────────────────────────────────────
+function renderCatTable(){
+  var el=document.getElementById('cat-table');if(!el)return;
+  if(!state.categories.length){el.innerHTML='<tr><td colspan="4" class="empty-table">Geen categorieën</td></tr>';return;}
+  var html='';
+  state.categories.forEach(function(c){
+    var col=CAT_COLORS.find(function(x){return x.id===c.color;})||{bg:'#e5e5e5',text:'#555'};
+    var itemCount=state.menu.filter(function(i){return i.cat===c.id;}).length;
+    var printerNames=(c.printers||[]).map(function(pid){var p=state.printers.find(function(x){return x.id===pid;});return p?p.name:'';}).filter(Boolean).join(', ');
+    html+='<tr>';
+    html+='<td><span style="display:inline-flex;align-items:center;gap:8px"><span class="cat-dot" style="background:'+col.bg+';color:'+col.text+'"></span><strong>'+c.name+'</strong></span></td>';
+    html+='<td>'+itemCount+'</td>';
+    html+='<td>'+(printerNames||'<span style="color:var(--text-muted)">Geen</span>')+'</td>';
+    html+='<td class="col-actions"><button class="btn btn-ghost btn-icon" onclick="openCatModal(\''+esc(c.id)+'\')" title="Bewerken">✎</button> <button class="btn btn-ghost btn-icon" onclick="delCat(\''+esc(c.id)+'\')" title="Verwijderen" style="color:var(--danger)">✕</button></td>';
+    html+='</tr>';
+  });
+  el.innerHTML=html;
+}
+
+// ── PRINTERS ──────────────────────────────────────────────
+function renderPrinterTable(){
+  var el=document.getElementById('printer-table');if(!el)return;
+  if(!state.printers.length){el.innerHTML='<tr><td colspan="5" class="empty-table">Geen printers</td></tr>';return;}
+  var html='';
+  state.printers.forEach(function(p){
+    var linkedCats=state.categories.filter(function(c){return (c.printers||[]).indexOf(p.id)!==-1;}).map(function(c){return c.name;}).join(', ');
+    html+='<tr><td><strong>'+p.name+'</strong></td><td>'+(p.ip||'<span style="color:var(--text-muted)">—</span>')+'</td>';
+    html+='<td>'+(p.isBill?'<span class="badge" style="background:#f3e8ff;color:#6b21a8">Kassa</span>':'<span class="badge">Ticket</span>')+'</td>';
+    html+='<td style="color:var(--text-muted)">'+(linkedCats||'—')+'</td>';
+    html+='<td class="col-actions"><button class="btn btn-ghost btn-icon" onclick="openPrinterModal(\''+esc(p.id)+'\')" title="Bewerken">✎</button> <button class="btn btn-ghost btn-icon" onclick="delPrinter(\''+esc(p.id)+'\')" title="Verwijderen" style="color:var(--danger)">✕</button></td></tr>';
+  });
+  el.innerHTML=html;
+}
+
+// ── STAFF ─────────────────────────────────────────────────
+function renderStaffTable(){
+  var el=document.getElementById('staff-table');if(!el)return;
+  if(!state.staff.length){el.innerHTML='<tr><td colspan="4" class="empty-table">Geen medewerkers</td></tr>';return;}
+  var html='';
+  state.staff.forEach(function(s,idx){
+    html+='<tr><td><strong>'+s.name+'</strong></td><td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:12px">'+s.pin+'</code></td>';
+    html+='<td>'+(s.isAdmin?'<span class="badge" style="background:#fef3c7;color:#92400e">Admin</span>':'<span class="badge">Bediening</span>')+'</td>';
+    html+='<td class="col-actions">'+(s.isAdmin?'':'<button class="btn btn-ghost btn-icon" onclick="delStaff('+idx+')" title="Verwijderen" style="color:var(--danger)">✕</button>')+'</td></tr>';
+  });
+  el.innerHTML=html;
+}
+
+// ── TAFELS ────────────────────────────────────────────────
+function renderTablesList(){
+  var el=document.getElementById('tables-list');if(!el)return;
+  var tables=state.tables||[];
+  var cnt=document.getElementById('tables-count');if(cnt)cnt.textContent=tables.length+' tafel'+(tables.length===1?'':'s');
+  if(!tables.length){el.innerHTML='<div class="empty-table">Nog geen tafels — voeg er een toe of gebruik bulk bewerken</div>';return;}
+  var html='<table><thead><tr><th>#</th><th>Tafel</th><th>In gebruik</th><th class="col-actions">Acties</th></tr></thead><tbody>';
+  tables.forEach(function(t,idx){
+    var inUse=state.orders.filter(function(o){return !o.paid&&String(o.table)===String(t);}).length;
+    html+='<tr><td>'+(idx+1)+'</td><td><strong>'+t+'</strong></td>';
+    html+='<td>'+(inUse?'<span class="status status-partial">'+inUse+' actief</span>':'<span style="color:var(--text-muted)">—</span>')+'</td>';
+    html+='<td class="col-actions"><button class="btn btn-ghost btn-icon" onclick="moveTable('+idx+',-1)" title="Omhoog">▲</button> <button class="btn btn-ghost btn-icon" onclick="moveTable('+idx+',1)" title="Omlaag">▼</button> <button class="btn btn-ghost btn-icon" onclick="delTable('+idx+')" title="Verwijderen" style="color:var(--danger)">✕</button></td></tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+  // sync de bulk textarea
+  var bulk=document.getElementById('tables-bulk');
+  if(bulk) bulk.value=tables.join(', ');
+}
+
+function openTableModal(){document.getElementById('t-name').value='';om('m-table');}
+function saveTable(){
+  var name=document.getElementById('t-name').value.trim();
+  if(!name){notify('Vul een tafelnaam in');return;}
+  if(!state.tables) state.tables=[];
+  if(state.tables.indexOf(name)!==-1){notify('Tafel bestaat al');return;}
+  state.tables.push(name);
+  pushSettings();cm('m-table');renderTablesList();notify('Tafel toegevoegd ✓');
+}
+function delTable(idx){
+  if(!confirm('Tafel "'+state.tables[idx]+'" verwijderen?')) return;
+  state.tables.splice(idx,1);pushSettings();renderTablesList();notify('Verwijderd');
+}
+function moveTable(idx,dir){
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=state.tables.length) return;
+  var tmp=state.tables[idx];state.tables[idx]=state.tables[newIdx];state.tables[newIdx]=tmp;
+  pushSettings();renderTablesList();
+}
+function saveBulkTables(){
+  var raw=document.getElementById('tables-bulk').value;
+  var arr=raw.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  state.tables=arr;
+  pushSettings();renderTablesList();notify('Tafels opgeslagen ✓ ('+arr.length+')');
+}
+
+function exportTablesXlsx(){
+  if(typeof XLSX==='undefined'){notify('Excel-library nog niet geladen');return;}
+  var rows=(state.tables||[]).map(function(t,idx){return {Volgorde:idx+1, Tafel:t};});
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Tafels');
+  XLSX.writeFile(wb, 'tafels.xlsx');
+  notify('Tafels geëxporteerd ✓');
+}
+function importTablesXlsx(input){
+  var file=input.files[0];if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var sheet=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(sheet);
+      if(!rows.length){notify('Geen data gevonden');return;}
+      if(!confirm('Bestaande tafels vervangen door '+rows.length+' rijen uit het bestand?')) return;
+      // sorteer op Volgorde indien aanwezig
+      rows.sort(function(a,b){return (parseInt(a.Volgorde)||0)-(parseInt(b.Volgorde)||0);});
+      var newTables=rows.map(function(r){return String(r.Tafel||r.Naam||r.Name||'').trim();}).filter(Boolean);
+      state.tables=newTables;
+      pushSettings();renderTablesList();
+      notify('Geïmporteerd: '+newTables.length+' tafels ✓');
+    }catch(err){console.error(err);notify('Fout bij importeren: '+err.message);}
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── ITEM MODAL ────────────────────────────────────────────
+function openItemModal(id){
+  editItemId=id||null;
+  document.getElementById('m-item-title').textContent=id?'Item bewerken':'Nieuw item';
+  var item=id?state.menu.find(function(i){return i.id===id;}):null;
+  document.getElementById('i-name').value=item?item.name:'';
+  document.getElementById('i-price').value=item?item.price:'';
+  document.getElementById('i-vars').value=item&&item.vars?item.vars.join(', '):'';
+  document.getElementById('i-cat').innerHTML=state.categories.map(function(c){return '<option value="'+c.id+'"'+(item&&item.cat===c.id?' selected':'')+'>'+c.name+'</option>';}).join('');
+  om('m-item');
+}
+function saveItem(){
+  var name=document.getElementById('i-name').value.trim();var price=parseFloat(document.getElementById('i-price').value);
+  var cat=document.getElementById('i-cat').value;var varStr=document.getElementById('i-vars').value.trim();
+  var vars=varStr?varStr.split(',').map(function(v){return v.trim();}).filter(Boolean):[];
+  if(!name||isNaN(price)){notify('Vul alle velden in');return;}
+  if(editItemId){var item=state.menu.find(function(i){return i.id===editItemId;});if(item){item.name=name;item.price=price;item.cat=cat;item.vars=vars;}}
+  else{state.menu.push({id:state.nextMid++,name:name,price:price,cat:cat,vars:vars});}
+  pushSettings();cm('m-item');renderMenuTable();notify('Opgeslagen ✓');
+}
+function delItem(id){
+  if(!confirm('Item verwijderen?')) return;
+  state.menu=state.menu.filter(function(i){return i.id!==id;});pushSettings();renderMenuTable();notify('Verwijderd');
+}
+
+// ── CAT MODAL ─────────────────────────────────────────────
+function openCatModal(id){
+  editCatId=id||null;
+  var cat=id?state.categories.find(function(c){return c.id===id;}):null;
+  document.getElementById('m-cat-title').textContent=id?'Categorie bewerken':'Nieuwe categorie';
+  document.getElementById('c-name').value=cat?cat.name:'';
+  selectedColor=cat?cat.color:'blue';
+  selectedCatPrinters=cat&&cat.printers?cat.printers.slice():[];
+  renderColorPicker();
+  renderPrinterCheckList();
+  om('m-cat');
+}
+function renderColorPicker(){
+  document.getElementById('c-colors').innerHTML=CAT_COLORS.map(function(c){
+    return '<div class="color-swatch '+(c.id===selectedColor?'sel':'')+'" style="background:'+c.bg+';border-color:'+(c.id===selectedColor?c.text:'transparent')+'" onclick="selColor(\''+c.id+'\')"></div>';
+  }).join('');
+}
+function selColor(id){selectedColor=id;renderColorPicker();}
+function renderPrinterCheckList(){
+  var el=document.getElementById('c-printers');
+  if(!state.printers.length){el.innerHTML='<div class="empty-table">Voeg eerst printers toe</div>';return;}
+  el.innerHTML=state.printers.map(function(p){
+    var on=selectedCatPrinters.indexOf(p.id)!==-1;
+    return '<div class="chk-row" onclick="togCatP(\''+esc(p.id)+'\')"><div class="chkbox '+(on?'on':'')+'" id="ccp-'+p.id+'">'+(on?'✓':'')+'</div><div><strong>'+p.name+'</strong>'+(p.ip?' <span style="color:var(--text-muted);font-size:12px">'+p.ip+'</span>':'')+(p.isBill?' <span class="badge" style="background:#f3e8ff;color:#6b21a8">Kassa</span>':'')+'</div></div>';
+  }).join('');
+}
+function togCatP(pid){
+  var idx=selectedCatPrinters.indexOf(pid);
+  if(idx===-1) selectedCatPrinters.push(pid); else selectedCatPrinters.splice(idx,1);
+  var el=document.getElementById('ccp-'+pid);
+  if(el){var on=selectedCatPrinters.indexOf(pid)!==-1;el.className='chkbox '+(on?'on':'');el.textContent=on?'✓':'';}
+}
+function saveCat(){
+  var name=document.getElementById('c-name').value.trim();if(!name){notify('Vul een naam in');return;}
+  if(editCatId){var cat=state.categories.find(function(c){return c.id===editCatId;});if(cat){cat.name=name;cat.color=selectedColor;cat.printers=selectedCatPrinters.slice();}}
+  else{state.categories.push({id:'cat'+state.nextCid++,name:name,color:selectedColor,printers:selectedCatPrinters.slice()});}
+  pushSettings();cm('m-cat');renderCatTable();notify('Opgeslagen ✓');
+}
+function delCat(id){
+  if(!confirm('Categorie verwijderen?')) return;
+  state.categories=state.categories.filter(function(c){return c.id!==id;});
+  pushSettings();renderCatTable();renderMenuTable();notify('Verwijderd');
+}
+
+// ── PRINTER MODAL ─────────────────────────────────────────
+function openPrinterModal(id){
+  editPrinterId=id||null;
+  var p=id?state.printers.find(function(x){return x.id===id;}):null;
+  document.getElementById('m-printer-title').textContent=id?'Printer bewerken':'Nieuwe printer';
+  document.getElementById('p-name').value=p?p.name:'';
+  document.getElementById('p-ip').value=p?p.ip||'':'';
+  isBillPrinter=p?p.isBill:false;
+  document.getElementById('p-bill-toggle').className='toggle '+(isBillPrinter?'on':'');
+  om('m-printer');
+}
+function toggleBill(){
+  isBillPrinter=!isBillPrinter;
+  document.getElementById('p-bill-toggle').className='toggle '+(isBillPrinter?'on':'');
+}
+function savePrinter(){
+  var name=document.getElementById('p-name').value.trim();var ip=document.getElementById('p-ip').value.trim();
+  if(!name){notify('Vul een naam in');return;}
+  if(isBillPrinter) state.printers.forEach(function(p){p.isBill=false;});
+  if(editPrinterId){var p=state.printers.find(function(x){return x.id===editPrinterId;});if(p){p.name=name;p.ip=ip;p.isBill=isBillPrinter;}}
+  else{state.printers.push({id:'p'+state.nextPid++,name:name,ip:ip,isBill:isBillPrinter});}
+  pushSettings();cm('m-printer');renderPrinterTable();notify('Opgeslagen ✓');
+}
+function delPrinter(id){
+  if(!confirm('Printer verwijderen?')) return;
+  state.printers=state.printers.filter(function(p){return p.id!==id;});
+  state.categories.forEach(function(c){c.printers=(c.printers||[]).filter(function(pid){return pid!==id;});});
+  pushSettings();renderPrinterTable();renderCatTable();notify('Verwijderd');
+}
+
+// ── STAFF MODAL ───────────────────────────────────────────
+function openStaffModal(){document.getElementById('s-name').value='';document.getElementById('s-pin').value='';om('m-staff');}
+function saveStaff(){
+  var name=document.getElementById('s-name').value.trim();var pin=document.getElementById('s-pin').value.trim();
+  if(!name||!pin){notify('Vul naam en PIN in');return;}
+  if(state.staff.find(function(s){return s.pin===pin;})){notify('PIN al in gebruik');return;}
+  state.staff.push({name:name,pin:pin});pushSettings();cm('m-staff');renderStaffTable();notify('Toegevoegd ✓');
+}
+function delStaff(idx){
+  if(!confirm('Medewerker verwijderen?')) return;
+  state.staff.splice(idx,1);pushSettings();renderStaffTable();
+}
+
+// ── STATISTIEKEN ──────────────────────────────────────────
+function getStatsData(){
+  var scope=document.getElementById('stats-scope');
+  var s=scope?scope.value:'all';
+  return state.orders.filter(function(o){
+    if(s==='active') return !o.paid;
+    if(s==='paid') return o.paid;
+    return true;
+  });
+}
+
+function renderStats(){
+  var orders=getStatsData();
+  // injecteer ts per item zodat we per uur kunnen aggregeren
+  var allItems=orders.reduce(function(a,o){return a.concat(o.items.map(function(i){return Object.assign({},i,{_ts:o.ts,_paidTs:o.paidTs});}));},[]);
+  var totalQty=allItems.reduce(function(s,i){return s+i.qty;},0);
+  var totalVal=allItems.reduce(function(s,i){return s+i.price*i.qty;},0);
+
+  // unieke items (per item-id, ongeacht variatie)
+  var uniqueIds={};
+  allItems.forEach(function(i){uniqueIds[i.id]=true;});
+
+  var so=document.getElementById('stats-orders');if(so)so.textContent=orders.length;
+  var si=document.getElementById('stats-items');if(si)si.textContent=totalQty;
+  var su=document.getElementById('stats-unique');if(su)su.textContent=Object.keys(uniqueIds).length;
+  var st=document.getElementById('stats-total');if(st)st.textContent='€'+totalVal.toFixed(2);
+
+  // per uur
+  var byHour={};
+  allItems.forEach(function(i){
+    if(!i._ts) return;
+    var d=new Date(i._ts);
+    var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':00';
+    if(!byHour[key]) byHour[key]={qty:0,total:0};
+    byHour[key].qty+=i.qty;
+    byHour[key].total+=i.price*i.qty;
+  });
+  var hrEl=document.getElementById('stats-hourly');
+  if(hrEl){
+    var hourKeys=Object.keys(byHour).sort();
+    if(!hourKeys.length){hrEl.innerHTML='<div class="empty-table">Nog geen data</div>';}
+    else{
+      var maxQty=Math.max.apply(null, hourKeys.map(function(k){return byHour[k].qty;}));
+      var html='<div style="display:flex;flex-direction:column;gap:6px">';
+      hourKeys.forEach(function(k){
+        var d=new Date(k);
+        var label=d.toLocaleString('nl-BE',{day:'2-digit',month:'2-digit'})+' '+d.getHours().toString().padStart(2,'0')+'u';
+        var pct=(byHour[k].qty/maxQty)*100;
+        html+='<div style="display:flex;align-items:center;gap:10px">';
+        html+='<div style="width:90px;font-size:12px;color:var(--text-muted)">'+label+'</div>';
+        html+='<div style="flex:1;background:#f1f5f9;border-radius:6px;height:24px;position:relative;overflow:hidden">';
+        html+='<div style="background:linear-gradient(90deg,var(--primary),#60a5fa);height:100%;width:'+pct+'%;border-radius:6px;display:flex;align-items:center;padding-left:10px;color:#fff;font-size:12px;font-weight:600;min-width:30px">'+byHour[k].qty+'</div>';
+        html+='</div>';
+        html+='<div style="width:80px;text-align:right;font-size:12px;color:var(--text-muted)">€'+byHour[k].total.toFixed(2)+'</div>';
+        html+='</div>';
+      });
+      html+='</div>';
+      hrEl.innerHTML=html;
+    }
+  }
+
+  // per categorie
+  var byCat={};
+  allItems.forEach(function(i){
+    if(!byCat[i.cat]) byCat[i.cat]={qty:0,total:0};
+    byCat[i.cat].qty+=i.qty;
+    byCat[i.cat].total+=i.price*i.qty;
+  });
+  var catEl=document.getElementById('stats-cat-table');
+  if(catEl){
+    if(!Object.keys(byCat).length){catEl.innerHTML='<div class="empty-table">Nog geen data</div>';}
+    else{
+      var html='<table><thead><tr><th>Categorie</th><th style="text-align:right">Aantal</th><th style="text-align:right">% v/h totaal</th><th style="text-align:right">Omzet</th></tr></thead><tbody>';
+      Object.keys(byCat).map(function(catId){
+        return {catId:catId,qty:byCat[catId].qty,total:byCat[catId].total};
+      }).sort(function(a,b){return b.qty-a.qty;}).forEach(function(row){
+        var pct=totalQty?((row.qty/totalQty)*100).toFixed(1):'0.0';
+        var col=catColorById(row.catId);
+        html+='<tr><td><span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(row.catId)+'</span></td>';
+        html+='<td style="text-align:right;font-weight:600">'+row.qty+'</td>';
+        html+='<td style="text-align:right">'+pct+'%</td>';
+        html+='<td style="text-align:right;font-weight:600">€'+row.total.toFixed(2)+'</td></tr>';
+      });
+      html+='</tbody></table>';
+      catEl.innerHTML=html;
+    }
+  }
+
+  // per item (samenvatting per item-id)
+  var byItem={};
+  allItems.forEach(function(i){
+    var k=i.id+'__'+(i.variation||'');
+    if(!byItem[k]) byItem[k]={name:i.name,variation:i.variation||null,cat:i.cat,price:i.price,qty:0,total:0};
+    byItem[k].qty+=i.qty;
+    byItem[k].total+=i.price*i.qty;
+  });
+  var itemEl=document.getElementById('stats-item-table');
+  if(itemEl){
+    var rows=Object.values(byItem).sort(function(a,b){return b.qty-a.qty;});
+    if(!rows.length){itemEl.innerHTML='<div class="empty-table">Nog geen data</div>';}
+    else{
+      var html='<table><thead><tr><th>Item</th><th>Categorie</th><th>Variatie</th><th style="text-align:right">Stuksprijs</th><th style="text-align:right">Aantal</th><th style="text-align:right">Omzet</th></tr></thead><tbody>';
+      rows.forEach(function(r){
+        var col=catColorById(r.cat);
+        html+='<tr><td><strong>'+r.name+'</strong></td>';
+        html+='<td><span class="badge" style="background:'+col.bg+';color:'+col.text+'">'+catNameById(r.cat)+'</span></td>';
+        html+='<td style="color:var(--text-muted)">'+(r.variation||'—')+'</td>';
+        html+='<td style="text-align:right">€'+r.price.toFixed(2)+'</td>';
+        html+='<td style="text-align:right;font-weight:600">'+r.qty+'</td>';
+        html+='<td style="text-align:right;font-weight:600">€'+r.total.toFixed(2)+'</td></tr>';
+      });
+      html+='</tbody></table>';
+      itemEl.innerHTML=html;
+    }
+  }
+}
+
+// ── EXPORT / IMPORT ───────────────────────────────────────
+function exportStatsXlsx(){
+  if(typeof XLSX==='undefined'){notify('Excel-library nog niet geladen');return;}
+  var orders=getStatsData();
+  var allItems=orders.reduce(function(a,o){return a.concat(o.items.map(function(i){return Object.assign({},i,{table:o.table,name_klant:o.name,waiter:o.waiter,ts:o.ts,paidTs:o.paidTs,paid:o.paid});}));},[]);
+
+  // Per item samenvatting
+  var byItem={};
+  allItems.forEach(function(i){
+    var k=i.id+'__'+(i.variation||'');
+    if(!byItem[k]) byItem[k]={Item:i.name,Categorie:catNameById(i.cat),Variatie:i.variation||'',Stuksprijs:i.price,Aantal:0,Omzet:0};
+    byItem[k].Aantal+=i.qty;
+    byItem[k].Omzet+=i.price*i.qty;
+  });
+  var perItem=Object.values(byItem).sort(function(a,b){return b.Aantal-a.Aantal;});
+
+  // Per categorie
+  var byCat={};
+  allItems.forEach(function(i){
+    var k=catNameById(i.cat);
+    if(!byCat[k]) byCat[k]={Categorie:k,Aantal:0,Omzet:0};
+    byCat[k].Aantal+=i.qty;
+    byCat[k].Omzet+=i.price*i.qty;
+  });
+  var perCat=Object.values(byCat).sort(function(a,b){return b.Aantal-a.Aantal;});
+
+  // Per uur
+  var byHour={};
+  allItems.forEach(function(i){
+    if(!i.ts) return;
+    var d=new Date(i.ts);
+    var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':00';
+    if(!byHour[key]) byHour[key]={Uur:key,Aantal:0,Omzet:0,Categorieen:{}};
+    byHour[key].Aantal+=i.qty;
+    byHour[key].Omzet+=i.price*i.qty;
+    var cn=catNameById(i.cat);
+    byHour[key].Categorieen[cn]=(byHour[key].Categorieen[cn]||0)+i.qty;
+  });
+  var perHour=Object.keys(byHour).sort().map(function(k){
+    var h=byHour[k];
+    var topCat=Object.keys(h.Categorieen).sort(function(a,b){return h.Categorieen[b]-h.Categorieen[a];})[0]||'';
+    return {Uur:h.Uur,Aantal:h.Aantal,Omzet:h.Omzet,'Top categorie':topCat};
+  });
+
+  // Per uur per categorie (apart blad voor cross-tabel analyse)
+  var hourCatRows=[];
+  Object.keys(byHour).sort().forEach(function(k){
+    var h=byHour[k];
+    Object.keys(h.Categorieen).forEach(function(cn){
+      hourCatRows.push({Uur:k,Categorie:cn,Aantal:h.Categorieen[cn]});
+    });
+  });
+
+  // Alle bestellingen detail
+  var allRows=allItems.map(function(i){
+    var openTs=i.ts?new Date(i.ts):null;
+    var payTs=i.paidTs?new Date(i.paidTs):null;
+    return {
+      Tafel:i.table,
+      Klant:i.name_klant,
+      Opnemer:i.waiter||'',
+      Datum:openTs?openTs.toLocaleDateString('nl-BE'):'',
+      Tijdstip:openTs?openTs.toLocaleTimeString('nl-BE'):'',
+      Uur:openTs?openTs.getHours():'',
+      Weekdag:openTs?openTs.toLocaleDateString('nl-BE',{weekday:'long'}):'',
+      Item:i.name,
+      Categorie:catNameById(i.cat),
+      Variatie:i.variation||'',
+      Commentaar:i.comment||'',
+      Aantal:i.qty,
+      Stuksprijs:i.price,
+      Subtotaal:i.price*i.qty,
+      Geserveerd:i.served?'Ja':'Nee',
+      Betaald:i.paid?'Ja':'Nee',
+      Betaalwijze:i.paymentMethod||'',
+      Betaaldatum:payTs?payTs.toLocaleDateString('nl-BE'):'',
+      Betaaltijdstip:payTs?payTs.toLocaleTimeString('nl-BE'):''
+    };
+  });
+
+  // Per betaalwijze
+  var byPm={};
+  orders.filter(function(o){return o.paid;}).forEach(function(o){
+    var m=o.paymentMethod||'Onbekend';
+    if(!byPm[m]) byPm[m]={Betaalwijze:m,Aantal_rekeningen:0,Omzet:0};
+    byPm[m].Aantal_rekeningen+=1;
+    byPm[m].Omzet+=o.items.reduce(function(s,i){return s+i.price*i.qty;},0);
+  });
+  var perPm=Object.values(byPm).sort(function(a,b){return b.Omzet-a.Omzet;});
+
+  // Per tafel (samenvatting)
+  var byTable={};
+  orders.forEach(function(o){
+    var k=o.table+'__'+o.name+'__'+(o.ts||0);
+    if(!byTable[k]){
+      var openTs=o.ts?new Date(o.ts):null;
+      var payTs=o.paidTs?new Date(o.paidTs):null;
+      byTable[k]={
+        Tafel:o.table,
+        Klant:o.name,
+        Opnemer:o.waiter||'',
+        Datum:openTs?openTs.toLocaleDateString('nl-BE'):'',
+        Geopend:openTs?openTs.toLocaleTimeString('nl-BE'):'',
+        Betaald:payTs?payTs.toLocaleTimeString('nl-BE'):'',
+        Betaalwijze:o.paymentMethod||'',
+        'Duur (min)':openTs&&payTs?Math.round((payTs-openTs)/60000):'',
+        Aantal_items:0,
+        Totaal:0
+      };
+    }
+    o.items.forEach(function(i){
+      byTable[k].Aantal_items+=i.qty;
+      byTable[k].Totaal+=i.price*i.qty;
+    });
+  });
+  var perTable=Object.values(byTable).sort(function(a,b){return (a.Datum+a.Geopend).localeCompare(b.Datum+b.Geopend);});
+
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perItem), 'Per item');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perCat), 'Per categorie');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perPm), 'Per betaalwijze');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perHour), 'Per uur');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hourCatRows), 'Uur x Categorie');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(perTable), 'Per tafel');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allRows), 'Alle bestellingen');
+
+  var date=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, 'statistieken-'+date+'.xlsx');
+  notify('Excel gedownload ✓');
+}
+
+function exportMenuXlsx(){
+  if(typeof XLSX==='undefined'){notify('Excel-library nog niet geladen');return;}
+  var rows=state.menu.map(function(i){
+    return {
+      Naam:i.name,
+      Prijs:i.price,
+      Categorie:catNameById(i.cat),
+      Variaties:(i.vars||[]).join(', ')
+    };
+  });
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Menu');
+  XLSX.writeFile(wb, 'menu.xlsx');
+  notify('Menu geëxporteerd ✓');
+}
+
+function importMenuXlsx(input){
+  var file=input.files[0];if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var sheet=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(sheet);
+      if(!rows.length){notify('Geen data gevonden');return;}
+      if(!confirm('Bestaande menu items vervangen door '+rows.length+' rijen uit het bestand?')) return;
+      var newMenu=[];
+      var nextId=Math.max.apply(null,[state.nextMid].concat(state.menu.map(function(m){return m.id;})))+1;
+      rows.forEach(function(r){
+        var name=String(r.Naam||r.Name||'').trim();
+        if(!name) return;
+        var price=parseFloat(r.Prijs||r.Price||0);
+        if(isNaN(price)) price=0;
+        var catName=String(r.Categorie||r.Category||'').trim();
+        var cat=state.categories.find(function(c){return c.name===catName;});
+        if(!cat){
+          // maak nieuwe categorie aan
+          var newCat={id:'cat'+state.nextCid++,name:catName||'Overige',color:'gray',printers:[]};
+          state.categories.push(newCat);
+          cat=newCat;
+        }
+        var varStr=String(r.Variaties||r.Variations||'').trim();
+        var vars=varStr?varStr.split(',').map(function(v){return v.trim();}).filter(Boolean):[];
+        newMenu.push({id:nextId++,name:name,price:price,cat:cat.id,vars:vars});
+      });
+      state.menu=newMenu;
+      state.nextMid=nextId;
+      pushSettings();renderMenuTable();renderCatTable();
+      notify('Geïmporteerd: '+newMenu.length+' items ✓');
+    }catch(err){
+      console.error(err);notify('Fout bij importeren: '+err.message);
+    }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function exportCatsXlsx(){
+  if(typeof XLSX==='undefined'){notify('Excel-library nog niet geladen');return;}
+  var rows=state.categories.map(function(c){
+    var printerNames=(c.printers||[]).map(function(pid){var p=state.printers.find(function(x){return x.id===pid;});return p?p.name:'';}).filter(Boolean).join(', ');
+    return {
+      Naam:c.name,
+      Kleur:c.color,
+      Printers:printerNames
+    };
+  });
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Categorieën');
+  XLSX.writeFile(wb, 'categorieen.xlsx');
+  notify('Categorieën geëxporteerd ✓');
+}
+
+function importCatsXlsx(input){
+  var file=input.files[0];if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var sheet=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(sheet);
+      if(!rows.length){notify('Geen data gevonden');return;}
+      if(!confirm('Bestaande categorieën vervangen door '+rows.length+' rijen uit het bestand?')) return;
+      var validColors=CAT_COLORS.map(function(c){return c.id;});
+      var newCats=[];
+      var nextId=Math.max.apply(null,[state.nextCid].concat(state.categories.map(function(c){
+        var m=String(c.id).match(/cat(\d+)/);return m?parseInt(m[1]):0;
+      })))+1;
+      rows.forEach(function(r){
+        var name=String(r.Naam||r.Name||'').trim();
+        if(!name) return;
+        var color=String(r.Kleur||r.Color||'gray').trim();
+        if(validColors.indexOf(color)===-1) color='gray';
+        var printerNames=String(r.Printers||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+        var printerIds=printerNames.map(function(n){var p=state.printers.find(function(x){return x.name===n;});return p?p.id:null;}).filter(Boolean);
+        newCats.push({id:'cat'+nextId++,name:name,color:color,printers:printerIds});
+      });
+      state.categories=newCats;
+      state.nextCid=nextId;
+      pushSettings();renderCatTable();renderMenuTable();
+      notify('Geïmporteerd: '+newCats.length+' categorieën ✓');
+    }catch(err){
+      console.error(err);notify('Fout bij importeren: '+err.message);
+    }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── INIT ──────────────────────────────────────────────────
+var savedUrl=localStorage.getItem('admin-fb-url');
+if(savedUrl){state.fbUrl=savedUrl;document.getElementById('fb-url').value=savedUrl;startPolling();}
+setSyncStatus('offline');
 </script>
 </body>
 </html>
