@@ -604,17 +604,17 @@ function startPolling(){
 function renderAfterSync(){
   var cur=document.querySelector('.screen.active');
   if(!cur) return;
-  if(cur.id==='s-pin') populateStaffSelect();
+  if(cur.id==='s-pin' && typeof populateStaffSelect==='function') populateStaffSelect();
   if(cur.id==='s-admin'){
-    renderAdminMenu();
-    renderPrinters();
-    renderCats();
-    renderStaff();
-    renderFbConfig();
+    if(typeof renderAdminMenu==='function') renderAdminMenu();
+    if(typeof renderPrinters==='function') renderPrinters();
+    if(typeof renderCats==='function') renderCats();
+    if(typeof renderStaff==='function') renderStaff();
+    if(typeof renderFbConfig==='function') renderFbConfig();
   }
-  if(cur.id==='s-orders') renderOrders();
-  if(cur.id==='s-history') renderHistory();
-  if(cur.id==='s-menu-browse') renderMenuBrowse();
+  if(cur.id==='s-orders' && typeof renderOrders==='function') renderOrders();
+  if(cur.id==='s-history' && typeof renderHistory==='function') renderHistory();
+  if(cur.id==='s-menu-browse' && typeof renderMenuBrowse==='function') renderMenuBrowse();
 }
 function fetchFromFirebase(){
   if(!state.fbUrl) return;
@@ -1487,7 +1487,9 @@ if(state.fbUrl){
   initFirebase(state.fbUrl);
 }
 // Toon eerst lokale medewerkers, sync zal ze updaten
-setTimeout(populateStaffSelect, 50);
+setTimeout(function(){
+  if(typeof populateStaffSelect==='function') populateStaffSelect();
+}, 50);
 </script>
 </body>
 </html>
